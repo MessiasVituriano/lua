@@ -2,7 +2,15 @@ vendor/
 node_modules/
 .env
 .git/
+.github/
 storage/logs/*
-storage/framework/cache/*
+storage/framework/cache/data/*
 storage/framework/sessions/*
 storage/framework/views/*
+storage/app/public/*
+public/build/
+public/hot
+tests/
+.vscode/
+.idea/
+*.md

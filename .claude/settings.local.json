@@ -23,7 +23,9 @@
       "Bash(php -l app/Http/Controllers/Api/MovimentacaoInternaController.php)",
       "Bash(php -l app/Http/Requests/MovimentacaoInternaRequest.php)",
       "Bash(php -l database/migrations/2024_01_04_000001_create_movimentacoes_internas_table.php)",
-      "Bash(php -l app/Models/CaixaDiario.php)"
+      "Bash(php -l app/Models/CaixaDiario.php)",
+      "Bash(bash -n docker/entrypoint.prod.sh)",
+      "Bash(bash -n docker/entrypoint.sh)"
     ]
   }
 }
