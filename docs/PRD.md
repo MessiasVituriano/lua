@@ -172,7 +172,58 @@ Sistema web para gerenciamento do fluxo de caixa de PetShops com suporte a multi
 
 ---
 
-### 2.5 Fornecedores
+### 2.5 Movimentacoes Internas
+
+**Descricao:** Registro de movimentacoes financeiras internas da loja, onde o dinheiro nao sai da empresa. Exemplos: transferencias entre contas/bancos, retiradas de caixa para cofre, aportes de capital, sangrias, transferencias entre lojas. Acessivel pelo menu "Movimentacoes Internas".
+
+**Entidades - Movimentacao Interna:**
+
+| Campo              | Tipo     | Obrigatorio | Observacao                                                        |
+|-------------------|----------|-------------|-------------------------------------------------------------------|
+| id                | integer  | auto        | PK                                                                |
+| loja_id           | integer  | sim         | FK, loja de origem                                                |
+| loja_destino_id   | integer  | nao         | FK, preenchido apenas em transferencias entre lojas               |
+| tipo              | enum     | sim         | transferencia_banco, sangria, aporte, transferencia_loja          |
+| banco_origem_id   | integer  | nao         | FK, banco de onde sai o valor (nao obrigatorio - dinheiro fisico) |
+| banco_destino_id  | integer  | nao         | FK, banco para onde vai o valor                                   |
+| valor             | decimal  | sim         |                                                                   |
+| descricao         | string   | sim         | ex: "Transferencia Nubank para Itau", "Sangria caixa"            |
+| data_movimentacao | date     | sim         |                                                                   |
+| status            | enum     | sim         | solicitada, aprovada, rejeitada                                   |
+| solicitado_por    | integer  | sim         | FK usuario, quem criou a solicitacao                              |
+| aprovado_por      | integer  | nao         | FK usuario (admin), quem aprovou/rejeitou                         |
+| aprovado_em       | datetime | nao         | data/hora da aprovacao/rejeicao                                   |
+| motivo_rejeicao   | string   | nao         | preenchido pelo admin ao rejeitar                                 |
+| observacao        | text     | nao         | campo livre                                                       |
+| created_at        | datetime | auto        |                                                                   |
+| updated_at        | datetime | auto        |                                                                   |
+
+**Regras:**
+- Movimentacoes internas **nao afetam** o saldo de entradas vs saidas do fluxo de caixa, pois o dinheiro permanece na empresa
+- **Sangria:** subtrai o valor do saldo visivel do caixa diario (sem contar como despesa). O caixa **nao precisa** estar aberto para registrar
+- **Aporte:** soma o valor ao saldo visivel do caixa diario
+- **Transferencia entre bancos:** `banco_origem_id` pode ser nulo (dinheiro fisico para banco). `banco_destino_id` obrigatorio
+- **Transferencia entre lojas:** exige `loja_destino_id`. Na aprovacao, gera automaticamente um registro espelho de entrada na loja destino. A loja destino deve **confirmar** o recebimento
+- **Fluxo de aprovacao:** atendente pode **solicitar** qualquer movimentacao. Admin **aprova ou rejeita**. Somente movimentacoes aprovadas tem efeito financeiro
+- **Admin pode criar e aprovar** movimentacoes diretamente (status ja nasce como "aprovada")
+- Historico consultavel com filtros por tipo, status, periodo e loja
+
+**Funcionalidades:**
+- [ ] CRUD de movimentacoes internas (atendente cria com status "solicitada")
+- [ ] Tela de aprovacao para admin (lista de movimentacoes pendentes)
+- [ ] Acao de aprovar/rejeitar com motivo obrigatorio na rejeicao
+- [ ] Filtros: por tipo, status, periodo, banco, loja destino
+- [ ] Registro rapido de sangria e aporte a partir da tela do caixa diario
+- [ ] Listagem de transferencias entre lojas com confirmacao de recebimento
+- [ ] Historico completo de movimentacoes por loja
+- [ ] Indicacao visual no caixa diario de sangrias e aportes aprovados no dia
+- [ ] Badge no menu com contagem de movimentacoes pendentes de aprovacao (admin)
+- [ ] Reflexo no saldo do caixa diario: sangrias subtraem, aportes somam (somente apos aprovacao)
+- [ ] Card no dashboard com resumo de movimentacoes internas do mes
+
+---
+
+### 2.6 Fornecedores
 
 **Descricao:** Cadastro de fornecedores vinculados aos pagamentos e produtos.
 
@@ -202,7 +253,7 @@ Sistema web para gerenciamento do fluxo de caixa de PetShops com suporte a multi
 
 ---
 
-### 2.6 Produtos e Estoque
+### 2.7 Produtos e Estoque
 
 **Descricao:** Cadastro de produtos com controle de custo, venda, margem por produto e estoque com entrada/saida.
 
@@ -254,7 +305,7 @@ Sistema web para gerenciamento do fluxo de caixa de PetShops com suporte a multi
 
 ---
 
-### 2.7 Dashboard e Relatorios
+### 2.8 Dashboard e Relatorios
 
 **Descricao:** Painel com resumo financeiro mensal e indicadores-chave.
 
@@ -302,6 +353,8 @@ lojas
   |             |-- 1:N --> entradas_caixa --> bancos
   |-- 1:N --> pagamentos --> fornecedores
   |                      --> bancos
+  |-- 1:N --> movimentacoes_internas --> bancos (origem/destino)
+  |                                 --> lojas (destino, em transferencias entre lojas)
   |-- 1:N --> produtos --> fornecedores
   |             |-- 1:N --> movimentacoes_estoque
   |-- N:N --> usuarios (pivot: usuario_loja)
@@ -320,8 +373,9 @@ bancos (tabela global, max 5 registros)
 | 3    | Fornecedores                  | nenhuma               |
 | 4    | Fluxo de Caixa (Entrada)      | Lojas, Bancos         |
 | 5    | Agendamento de Pagamentos     | Lojas, Bancos, Fornecedores |
-| 6    | Produtos e Estoque            | Lojas, Fornecedores   |
-| 7    | Dashboard e Relatorios        | todos os anteriores   |
+| 6    | Movimentacoes Internas        | Lojas, Bancos         |
+| 7    | Produtos e Estoque            | Lojas, Fornecedores   |
+| 8    | Dashboard e Relatorios        | todos os anteriores   |
 
 ---
 

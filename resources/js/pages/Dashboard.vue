@@ -194,6 +194,32 @@
                 </div>
             </div>
 
+            <!-- Movimentacoes internas -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-white"><h6 class="mb-0"><i class="bi bi-arrow-left-right text-primary"></i> Movimentacoes Internas</h6></div>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm mb-0">
+                                <thead><tr><th>Tipo</th><th>Qtd</th><th>Total</th></tr></thead>
+                                <tbody>
+                                    <tr v-for="(label, key) in movTipos" :key="key" v-if="d.movimentacoes_internas[key]">
+                                        <td><span class="badge" :class="movBadge(key)">{{ label }}</span></td>
+                                        <td>{{ d.movimentacoes_internas[key].quantidade }}</td>
+                                        <td class="fw-semibold">R$ {{ fmt(d.movimentacoes_internas[key].total) }}</td>
+                                    </tr>
+                                    <tr v-if="!Object.keys(d.movimentacoes_internas).length"><td colspan="3" class="text-center text-muted py-3">Nenhuma movimentacao no periodo.</td></tr>
+                                    <tr v-if="d.movimentacoes_pendentes > 0" class="table-warning">
+                                        <td colspan="2"><i class="bi bi-hourglass-split"></i> Pendentes de aprovacao</td>
+                                        <td class="fw-bold">{{ d.movimentacoes_pendentes }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Pagamentos proximos + estoque baixo -->
             <div class="row g-4 mb-4">
                 <div class="col-md-6">
@@ -268,6 +294,14 @@ const catLabels = {
 const formaLabels = {
     dinheiro: 'Dinheiro', pix: 'PIX', cartao_debito: 'Cartao Debito', cartao_credito: 'Cartao Credito',
 };
+
+const movTipos = {
+    transferencia_banco: 'Transf. Banco', sangria: 'Sangria', aporte: 'Aporte', transferencia_loja: 'Transf. Loja',
+};
+
+function movBadge(tipo) {
+    return { transferencia_banco: 'bg-info', sangria: 'bg-danger', aporte: 'bg-success', transferencia_loja: 'bg-primary' }[tipo] || 'bg-secondary';
+}
 
 const formaColors = ['#10b981', '#6366f1', '#f59e0b', '#ef4444'];
 const catColors = ['#6366f1', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6', '#6b7280'];

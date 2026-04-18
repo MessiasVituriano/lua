@@ -8,7 +8,22 @@
       "Bash(docker-compose down:*)",
       "Bash(docker-compose up:*)",
       "Bash(docker-compose exec:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(ipconfig)",
+      "Bash(npx vite:*)",
+      "Bash(ls node_modules/.bin/vite*)",
+      "Bash(node node_modules/.bin/vite build)",
+      "Bash(npm run:*)",
+      "Bash(./node_modules/.bin/vite build:*)",
+      "Bash(node -e \"require\\('vite'\\)\")",
+      "Bash(ls node_modules/vite/bin/)",
+      "Bash(node node_modules/vite/bin/vite.js build)",
+      "Bash(node -e ':*)",
+      "Bash(php -l app/Models/MovimentacaoInterna.php)",
+      "Bash(php -l app/Http/Controllers/Api/MovimentacaoInternaController.php)",
+      "Bash(php -l app/Http/Requests/MovimentacaoInternaRequest.php)",
+      "Bash(php -l database/migrations/2024_01_04_000001_create_movimentacoes_internas_table.php)",
+      "Bash(php -l app/Models/CaixaDiario.php)"
     ]
   }
 }

@@ -43,8 +43,10 @@ class PagamentoController extends Controller
             ->where('data_vencimento', '<', Carbon::today())
             ->update(['status' => 'atrasado']);
 
+        $perPage = min((int) $request->input('per_page', 20), 200);
+
         return response()->json(
-            $query->orderBy('data_vencimento')->paginate(20)
+            $query->orderBy('data_vencimento')->paginate($perPage)
         );
     }
 

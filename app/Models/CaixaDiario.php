@@ -60,7 +60,20 @@ class CaixaDiario extends Model
             ->whereIn('status', ['pago', 'parcial'])
             ->sum('valor_pago');
 
-        $this->saldo = $this->total_entradas - $this->total_saidas;
+        // Movimentacoes internas aprovadas do dia: sangrias subtraem, aportes somam
+        $aportes = MovimentacaoInterna::where('loja_id', $this->loja_id)
+            ->where('data_movimentacao', $this->data)
+            ->where('status', 'aprovada')
+            ->where('tipo', 'aporte')
+            ->sum('valor');
+
+        $sangrias = MovimentacaoInterna::where('loja_id', $this->loja_id)
+            ->where('data_movimentacao', $this->data)
+            ->where('status', 'aprovada')
+            ->where('tipo', 'sangria')
+            ->sum('valor');
+
+        $this->saldo = $this->total_entradas - $this->total_saidas + $aportes - $sangrias;
         $this->save();
     }
 }

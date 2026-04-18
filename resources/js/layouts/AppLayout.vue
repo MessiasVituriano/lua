@@ -42,6 +42,12 @@
                     <i class="bi bi-cash-register"></i> Caixa do Dia
                 </router-link>
             </li>
+            <li class="nav-item">
+                <router-link class="nav-link" active-class="active" :to="{ name: 'movimentacoes.index' }" @click="closeMobile">
+                    <i class="bi bi-arrow-left-right"></i> Movimentacoes
+                    <span v-if="isAdmin && movPendentesCount > 0" class="badge bg-warning text-dark ms-1 rounded-pill">{{ movPendentesCount }}</span>
+                </router-link>
+            </li>
             <template v-if="isAdmin">
                 <li class="nav-item">
                     <router-link class="nav-link" active-class="active" :to="{ name: 'caixa.historico' }" @click="closeMobile">
@@ -51,7 +57,13 @@
                 <li class="nav-item">
                     <router-link class="nav-link" active-class="active" :to="{ name: 'pagamentos.index' }" @click="closeMobile">
                         <i class="bi bi-calendar-check"></i> Pagamentos
-                        <span v-if="alertCount > 0" class="badge bg-danger ms-1 rounded-pill">{{ alertCount }}</span>
+                        <span v-if="alertAtrasados > 0" class="badge bg-danger ms-1 rounded-pill" title="Atrasados">{{ alertAtrasados }}</span>
+                        <span v-if="alertProximos > 0" class="badge bg-warning text-dark ms-1 rounded-pill" title="Vencendo em 7 dias">{{ alertProximos }}</span>
+                    </router-link>
+                </li>
+                <li class="nav-item">
+                    <router-link class="nav-link" active-class="active" :to="{ name: 'pagamentos.calendario' }" @click="closeMobile">
+                        <i class="bi bi-calendar3"></i> Calendario
                     </router-link>
                 </li>
             </template>
@@ -162,6 +174,9 @@ const auth = useAuthStore();
 const notification = useNotificationStore();
 const theme = useThemeStore();
 const alertCount = ref(0);
+const alertAtrasados = ref(0);
+const alertProximos = ref(0);
+const movPendentesCount = ref(0);
 const sidebarOpen = ref(false);
 const caixasPendentes = ref([]);
 let pendentesTimer = null;
@@ -175,7 +190,8 @@ const titles = {
     'fornecedores.index': 'Fornecedores', 'fornecedores.create': 'Novo Fornecedor', 'fornecedores.show': 'Detalhes do Fornecedor', 'fornecedores.edit': 'Editar Fornecedor',
     'usuarios.index': 'Usuarios', 'usuarios.create': 'Novo Usuario', 'usuarios.edit': 'Editar Usuario',
     'caixa.hoje': 'Caixa do Dia', 'caixa.historico': 'Historico de Caixa', 'caixa.show': 'Detalhes do Caixa',
-    'pagamentos.index': 'Pagamentos', 'pagamentos.create': 'Novo Pagamento', 'pagamentos.edit': 'Editar Pagamento',
+    'movimentacoes.index': 'Movimentacoes Internas', 'movimentacoes.create': 'Nova Movimentacao', 'movimentacoes.edit': 'Editar Movimentacao',
+    'pagamentos.index': 'Pagamentos', 'pagamentos.calendario': 'Calendario de Pagamentos', 'pagamentos.create': 'Novo Pagamento', 'pagamentos.edit': 'Editar Pagamento',
     'produtos.index': 'Produtos', 'produtos.create': 'Novo Produto', 'produtos.edit': 'Editar Produto', 'produtos.show': 'Detalhes do Produto',
 };
 
@@ -202,8 +218,17 @@ async function loadPendentes() {
 onMounted(async () => {
     try {
         const { data } = await axios.get('/pagamentos-alertas');
+        alertAtrasados.value = data.total_atrasados;
+        alertProximos.value = data.total_proximos;
         alertCount.value = data.total_atrasados + data.total_proximos;
     } catch {}
+
+    if (isAdmin.value) {
+        try {
+            const { data } = await axios.get('/movimentacoes-internas-pendentes');
+            movPendentesCount.value = data.length;
+        } catch {}
+    }
 
     // Carregar pendencias e fazer polling a cada 30s
     await loadPendentes();

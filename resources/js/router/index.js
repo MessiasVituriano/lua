@@ -22,6 +22,9 @@ import CaixaHistorico from '../pages/caixa/Historico.vue';
 import CaixaShow from '../pages/caixa/Show.vue';
 import PagamentosIndex from '../pages/pagamentos/Index.vue';
 import PagamentosForm from '../pages/pagamentos/Form.vue';
+import PagamentosCalendario from '../pages/pagamentos/Calendario.vue';
+import MovimentacoesIndex from '../pages/movimentacoes/Index.vue';
+import MovimentacoesForm from '../pages/movimentacoes/Form.vue';
 import ProdutosIndex from '../pages/produtos/Index.vue';
 import ProdutosForm from '../pages/produtos/Form.vue';
 import ProdutosShow from '../pages/produtos/Show.vue';
@@ -65,8 +68,13 @@ const routes = [
             { path: 'caixa', name: 'caixa.hoje', component: CaixaHoje },
             { path: 'caixa/historico', name: 'caixa.historico', component: CaixaHistorico },
             { path: 'caixa/:id', name: 'caixa.show', component: CaixaShow },
+            // Movimentacoes Internas
+            { path: 'movimentacoes', name: 'movimentacoes.index', component: MovimentacoesIndex },
+            { path: 'movimentacoes/criar', name: 'movimentacoes.create', component: MovimentacoesForm },
+            { path: 'movimentacoes/:id/editar', name: 'movimentacoes.edit', component: MovimentacoesForm },
             // Pagamentos
             { path: 'pagamentos', name: 'pagamentos.index', component: PagamentosIndex },
+            { path: 'pagamentos/calendario', name: 'pagamentos.calendario', component: PagamentosCalendario },
             { path: 'pagamentos/criar', name: 'pagamentos.create', component: PagamentosForm },
             { path: 'pagamentos/:id/editar', name: 'pagamentos.edit', component: PagamentosForm },
             // Produtos
@@ -101,7 +109,7 @@ router.beforeEach(async (to, from, next) => {
     // Bloquear rotas admin para atendentes
     const adminRoutes = ['dashboard', 'lojas.index', 'lojas.create', 'lojas.edit', 'lojas.usuarios',
         'bancos.index', 'bancos.create', 'bancos.edit', 'usuarios.index', 'usuarios.create', 'usuarios.edit',
-        'caixa.historico', 'pagamentos.index', 'pagamentos.create', 'pagamentos.edit'];
+        'caixa.historico', 'pagamentos.index', 'pagamentos.calendario', 'pagamentos.create', 'pagamentos.edit'];
     if (auth.user && auth.user.role !== 'admin' && adminRoutes.includes(to.name)) {
         return next({ name: 'caixa.hoje' });
     }

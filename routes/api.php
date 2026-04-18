@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\FornecedorController;
 use App\Http\Controllers\Api\LojaController;
 use App\Http\Controllers\Api\PagamentoController;
+use App\Http\Controllers\Api\MovimentacaoInternaController;
 use App\Http\Controllers\Api\ProdutoController;
 use App\Http\Controllers\Api\UsuarioController;
 use Illuminate\Http\Request;
@@ -42,6 +43,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Bancos (leitura para todos)
     Route::get('bancos', [BancoController::class, 'index']);
     Route::get('bancos/{banco}', [BancoController::class, 'show']);
+
+    // Movimentacoes Internas (CRUD para todos, aprovacao admin via middleware no controller)
+    Route::apiResource('movimentacoes-internas', MovimentacaoInternaController::class);
+    Route::post('movimentacoes-internas/{movimentacoes_interna}/aprovar', [MovimentacaoInternaController::class, 'aprovar']);
+    Route::post('movimentacoes-internas/{movimentacoes_interna}/rejeitar', [MovimentacaoInternaController::class, 'rejeitar']);
+    Route::get('movimentacoes-internas-pendentes', [MovimentacaoInternaController::class, 'pendentes']);
 
     // Alertas pagamentos (badge no sidebar)
     Route::get('pagamentos-alertas', [PagamentoController::class, 'alertas']);

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CaixaDiario;
 use App\Models\EntradaCaixa;
 use App\Models\Pagamento;
+use App\Models\MovimentacaoInterna;
 use App\Models\Produto;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -162,6 +163,19 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
+        // ── Movimentacoes internas do periodo ──
+        $movInternas = MovimentacaoInterna::where('loja_id', $lojaId)
+            ->whereBetween('data_movimentacao', [$inicio, $fim])
+            ->where('status', 'aprovada')
+            ->selectRaw('tipo, SUM(valor) as total, COUNT(*) as quantidade')
+            ->groupBy('tipo')
+            ->get()
+            ->keyBy('tipo');
+
+        $movPendentes = MovimentacaoInterna::where('loja_id', $lojaId)
+            ->where('status', 'solicitada')
+            ->count();
+
         // ── Produtos com estoque baixo ──
         $produtosEstoqueBaixo = Produto::with('fornecedor')
             ->where('loja_id', $lojaId)
@@ -197,6 +211,10 @@ class DashboardController extends Controller
             'maiores_despesas' => $maioresDespesas,
             'pagamentos_proximos' => $pagamentosProximos,
             'produtos_estoque_baixo' => $produtosEstoqueBaixo,
+
+            // Movimentacoes internas
+            'movimentacoes_internas' => $movInternas,
+            'movimentacoes_pendentes' => $movPendentes,
         ]);
     }
 }
