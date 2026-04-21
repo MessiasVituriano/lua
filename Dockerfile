@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     nginx \
     supervisor \
+    gettext-base \
     && docker-php-ext-install pdo pdo_pgsql pgsql mbstring exif pcntl bcmath gd \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
