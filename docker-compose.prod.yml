@@ -15,6 +15,7 @@ services:
     ports:
       - "80:10000"
     volumes:
+      - ./.env:/var/www/.env
       - storage-data:/var/www/storage
     depends_on:
       db:
