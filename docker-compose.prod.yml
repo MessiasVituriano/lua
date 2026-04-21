@@ -1,0 +1,59 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_OPTIONS: "--max-old-space-size=768"
+    image: lua-app:prod
+    container_name: lua-app-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: "10000"
+    ports:
+      - "80:10000"
+    volumes:
+      - storage-data:/var/www/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - lua-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  db:
+    image: postgres:16-alpine
+    container_name: lua-db-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lua-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+networks:
+  lua-network:
+    driver: bridge
+
+volumes:
+  pgdata:
+    driver: local
+  storage-data:
+    driver: local

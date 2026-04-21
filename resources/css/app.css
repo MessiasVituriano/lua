@@ -1,0 +1,408 @@
+/* ============================================================
+   LUA — Design System
+   Minimalista sofisticado: neutros warm + violet discreto
+   ============================================================ */
+
+:root,
+[data-bs-theme="light"] {
+    /* Neutrals (stone) */
+    --lua-bg:              #fafaf9;
+    --lua-surface:         #ffffff;
+    --lua-surface-muted:   #f5f5f4;
+    --lua-border:          #e7e5e4;
+    --lua-border-strong:   #d6d3d1;
+    --lua-divider:         #edebe9;
+
+    /* Text */
+    --lua-text:            #1c1917;
+    --lua-text-soft:       #44403c;
+    --lua-text-muted:      #78716c;
+    --lua-text-subtle:     #a8a29e;
+
+    /* Brand — violet */
+    --lua-primary:         #6e56cf;
+    --lua-primary-hover:   #5b45b8;
+    --lua-primary-soft:    #f3f0ff;
+    --lua-primary-border:  #d9d1f5;
+
+    /* Semantic */
+    --lua-success:         #059669;
+    --lua-success-soft:    #ecfdf5;
+    --lua-danger:          #dc2626;
+    --lua-danger-soft:     #fef2f2;
+    --lua-warning:         #d97706;
+    --lua-warning-soft:    #fffbeb;
+    --lua-info:            #0284c7;
+    --lua-info-soft:       #f0f9ff;
+
+    /* Layout */
+    --lua-sidebar:         #ffffff;
+    --lua-sidebar-hover:   #f5f5f4;
+    --lua-sidebar-active:  #f3f0ff;
+    --lua-sidebar-border:  #e7e5e4;
+    --lua-topbar:          #ffffff;
+    --lua-topbar-border:   #e7e5e4;
+
+    /* Card */
+    --lua-card-bg:         #ffffff;
+    --lua-card-border:     #e7e5e4;
+    --lua-card-shadow:     0 0 0 1px rgba(0, 0, 0, 0.02);
+
+    /* Inputs */
+    --lua-input-bg:        #ffffff;
+    --lua-input-border:    #d6d3d1;
+    --lua-input-focus:     #6e56cf;
+    --lua-input-focus-ring: rgba(110, 86, 207, 0.15);
+
+    /* Misc */
+    --lua-table-hover:     #fafaf9;
+    --lua-radius:          10px;
+    --lua-radius-lg:       14px;
+    --lua-radius-sm:       6px;
+}
+
+[data-bs-theme="dark"] {
+    --lua-bg:              #0c0a13;
+    --lua-surface:         #13111c;
+    --lua-surface-muted:   #181525;
+    --lua-border:          #272139;
+    --lua-border-strong:   #372e52;
+    --lua-divider:         #1e1b2d;
+
+    --lua-text:            #ece9f5;
+    --lua-text-soft:       #c4c0d4;
+    --lua-text-muted:      #8a84a3;
+    --lua-text-subtle:     #5a5470;
+
+    --lua-primary:         #9e85ee;
+    --lua-primary-hover:   #b4a0f5;
+    --lua-primary-soft:    rgba(158, 133, 238, 0.12);
+    --lua-primary-border:  rgba(158, 133, 238, 0.35);
+
+    --lua-success-soft:    rgba(16, 185, 129, 0.12);
+    --lua-danger-soft:     rgba(220, 38, 38, 0.15);
+    --lua-warning-soft:    rgba(217, 119, 6, 0.15);
+    --lua-info-soft:       rgba(2, 132, 199, 0.15);
+
+    --lua-sidebar:         #0f0d18;
+    --lua-sidebar-hover:   #1a1627;
+    --lua-sidebar-active:  rgba(158, 133, 238, 0.12);
+    --lua-sidebar-border:  #1e1b2d;
+    --lua-topbar:          #0f0d18;
+    --lua-topbar-border:   #1e1b2d;
+
+    --lua-card-bg:         #13111c;
+    --lua-card-border:     #272139;
+    --lua-card-shadow:     0 0 0 1px rgba(255, 255, 255, 0.02);
+
+    --lua-input-bg:        #181525;
+    --lua-input-border:    #332b4a;
+    --lua-input-focus-ring: rgba(158, 133, 238, 0.2);
+
+    --lua-table-hover:     rgba(255, 255, 255, 0.03);
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+    letter-spacing: -0.005em;
+}
+
+body {
+    background: var(--lua-bg);
+    color: var(--lua-text);
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+h1, h2, h3, h4, h5, h6,
+.display-title {
+    font-family: 'Inter Tight', 'Inter', sans-serif;
+    letter-spacing: -0.02em;
+    color: var(--lua-text);
+    font-weight: 600;
+}
+
+h5 { font-size: 1.0625rem; }
+h6 { font-size: 0.9375rem; }
+
+.text-muted { color: var(--lua-text-muted) !important; }
+small { color: var(--lua-text-muted); }
+
+/* ============================================================
+   Typography utilities
+   ============================================================ */
+
+.font-display {
+    font-family: 'Inter Tight', 'Inter', sans-serif;
+    letter-spacing: -0.025em;
+    font-weight: 600;
+}
+
+.eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lua-text-muted);
+}
+
+.num-tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+}
+
+/* ============================================================
+   Cards
+   ============================================================ */
+
+.card {
+    border: 1px solid var(--lua-card-border);
+    box-shadow: var(--lua-card-shadow);
+    border-radius: var(--lua-radius);
+    background: var(--lua-card-bg);
+}
+
+.card-header {
+    background: transparent !important;
+    border-bottom: 1px solid var(--lua-divider);
+    padding: 0.875rem 1.125rem;
+}
+
+.card-header h5,
+.card-header h6 {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+
+/* Remove legacy border-start hack in favor of subtle accent */
+.card.accent-success { border-left: 3px solid var(--lua-success); }
+.card.accent-danger  { border-left: 3px solid var(--lua-danger); }
+.card.accent-warning { border-left: 3px solid var(--lua-warning); }
+.card.accent-primary { border-left: 3px solid var(--lua-primary); }
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+
+.btn {
+    font-weight: 500;
+    border-radius: var(--lua-radius-sm);
+    padding: 0.5rem 0.9rem;
+    font-size: 0.875rem;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+}
+.btn-sm {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8125rem;
+}
+
+.btn-lua {
+    background: var(--lua-primary);
+    color: #fff;
+    border: 1px solid var(--lua-primary);
+    box-shadow: 0 1px 2px rgba(110, 86, 207, 0.12);
+}
+.btn-lua:hover:not(:disabled) {
+    background: var(--lua-primary-hover);
+    border-color: var(--lua-primary-hover);
+    color: #fff;
+}
+.btn-lua:disabled { opacity: 0.6; color: #fff; background: var(--lua-primary); }
+
+.btn-outline-secondary {
+    color: var(--lua-text-soft);
+    border-color: var(--lua-border-strong);
+    background: var(--lua-surface);
+}
+.btn-outline-secondary:hover:not(:disabled) {
+    color: var(--lua-text);
+    background: var(--lua-surface-muted);
+    border-color: var(--lua-border-strong);
+}
+
+.btn-primary {
+    background: var(--lua-primary);
+    border-color: var(--lua-primary);
+}
+.btn-primary:hover { background: var(--lua-primary-hover); border-color: var(--lua-primary-hover); }
+
+/* ============================================================
+   Forms
+   ============================================================ */
+
+.form-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--lua-text-soft);
+    margin-bottom: 0.375rem;
+}
+.form-label.small { font-size: 0.75rem; }
+
+.form-control,
+.form-select {
+    background: var(--lua-input-bg);
+    border: 1px solid var(--lua-input-border);
+    color: var(--lua-text);
+    border-radius: var(--lua-radius-sm);
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--lua-input-focus);
+    box-shadow: 0 0 0 3px var(--lua-input-focus-ring);
+    background: var(--lua-input-bg);
+    color: var(--lua-text);
+}
+.form-control-sm,
+.form-select-sm {
+    font-size: 0.8125rem;
+    padding: 0.375rem 0.6rem;
+}
+
+/* ============================================================
+   Tables
+   ============================================================ */
+
+.table {
+    color: var(--lua-text);
+    --bs-table-bg: transparent;
+    margin-bottom: 0;
+}
+.table th {
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--lua-text-muted);
+    border-bottom: 1px solid var(--lua-divider);
+    padding: 0.6rem 0.875rem;
+}
+.table td {
+    padding: 0.7rem 0.875rem;
+    border-bottom: 1px solid var(--lua-divider);
+    vertical-align: middle;
+}
+.table > :not(caption) > * > * { background: transparent; }
+.table-hover > tbody > tr:hover > * {
+    background: var(--lua-table-hover);
+    --bs-table-hover-bg: var(--lua-table-hover);
+}
+
+/* ============================================================
+   Badges
+   ============================================================ */
+
+.badge {
+    font-weight: 500;
+    font-size: 0.75rem;
+    padding: 0.28em 0.6em;
+    border-radius: var(--lua-radius-sm);
+    letter-spacing: 0.005em;
+}
+
+.badge.bg-success { background: var(--lua-success-soft) !important; color: var(--lua-success) !important; }
+.badge.bg-danger  { background: var(--lua-danger-soft) !important; color: var(--lua-danger) !important; }
+.badge.bg-warning { background: var(--lua-warning-soft) !important; color: var(--lua-warning) !important; }
+.badge.bg-info    { background: var(--lua-info-soft) !important; color: var(--lua-info) !important; }
+.badge.bg-primary { background: var(--lua-primary-soft) !important; color: var(--lua-primary) !important; }
+.badge.bg-secondary {
+    background: var(--lua-surface-muted) !important;
+    color: var(--lua-text-soft) !important;
+    border: 1px solid var(--lua-border);
+}
+
+.badge-ativo    { background: var(--lua-success-soft); color: var(--lua-success); }
+.badge-inativo  { background: var(--lua-danger-soft); color: var(--lua-danger); }
+
+/* Semantic text colors remapped */
+.text-success { color: var(--lua-success) !important; }
+.text-danger  { color: var(--lua-danger) !important; }
+.text-warning { color: var(--lua-warning) !important; }
+.text-info    { color: var(--lua-info) !important; }
+.text-primary { color: var(--lua-primary) !important; }
+
+/* ============================================================
+   Alerts
+   ============================================================ */
+
+.alert {
+    border: 1px solid transparent;
+    border-radius: var(--lua-radius);
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+}
+.alert-success { background: var(--lua-success-soft); color: var(--lua-success); border-color: transparent; }
+.alert-danger  { background: var(--lua-danger-soft); color: var(--lua-danger); border-color: transparent; }
+.alert-warning { background: var(--lua-warning-soft); color: var(--lua-warning); border-color: transparent; }
+.alert-info    { background: var(--lua-info-soft); color: var(--lua-info); border-color: transparent; }
+
+/* ============================================================
+   Dropdown
+   ============================================================ */
+
+.dropdown-menu {
+    border: 1px solid var(--lua-border);
+    border-radius: var(--lua-radius);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    background: var(--lua-surface);
+    padding: 0.35rem;
+    min-width: 200px;
+}
+.dropdown-item {
+    border-radius: var(--lua-radius-sm);
+    font-size: 0.875rem;
+    padding: 0.45rem 0.65rem;
+    color: var(--lua-text-soft);
+}
+.dropdown-item:hover { background: var(--lua-surface-muted); color: var(--lua-text); }
+.dropdown-divider { border-color: var(--lua-divider); margin: 0.3rem 0; }
+
+/* ============================================================
+   Theme toggle
+   ============================================================ */
+
+.theme-toggle {
+    background: var(--lua-surface);
+    border: 1px solid var(--lua-border);
+    border-radius: var(--lua-radius-sm);
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--lua-text-muted);
+    transition: all 0.15s ease;
+}
+.theme-toggle:hover {
+    color: var(--lua-primary);
+    border-color: var(--lua-primary-border);
+    background: var(--lua-primary-soft);
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+
+@media (max-width: 767.98px) {
+    .table { font-size: 0.82rem; }
+    .table th, .table td { padding: 0.45rem 0.6rem; white-space: nowrap; }
+    h5 { font-size: 1rem; }
+}

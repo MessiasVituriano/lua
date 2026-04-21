@@ -24,9 +24,5 @@
         <button type="submit" class="btn btn-lua w-100 py-2">
             <i class="bi bi-box-arrow-in-right"></i> Entrar
         </button>
-
-        <div class="text-center mt-3">
-            <a href="{{ route('register') }}" class="text-decoration-none small">Criar uma conta</a>
-        </div>
     </form>
 @endsection
