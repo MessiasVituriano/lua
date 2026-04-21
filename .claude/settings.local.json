@@ -26,7 +26,9 @@
       "Bash(php -l app/Models/CaixaDiario.php)",
       "Bash(bash -n docker/entrypoint.prod.sh)",
       "Bash(bash -n docker/entrypoint.sh)",
-      "Bash(docker compose *)"
+      "Bash(docker compose *)",
+      "Bash(xargs ls *)",
+      "Bash(php artisan *)"
     ]
   }
 }

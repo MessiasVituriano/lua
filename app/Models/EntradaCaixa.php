@@ -15,12 +15,21 @@ class EntradaCaixa extends Model
         'caixa_diario_id',
         'forma_recebimento',
         'banco_id',
+        'plano_maquininha_id',
+        'bandeira_id',
+        'parcelas',
+        'taxa_aplicada',
+        'valor_bruto',
+        'com_antecipacao',
         'valor',
         'descricao',
     ];
 
     protected $casts = [
         'valor' => 'decimal:2',
+        'valor_bruto' => 'decimal:2',
+        'taxa_aplicada' => 'decimal:2',
+        'com_antecipacao' => 'boolean',
     ];
 
     public const FORMAS = [
@@ -38,5 +47,15 @@ class EntradaCaixa extends Model
     public function banco()
     {
         return $this->belongsTo(Banco::class);
+    }
+
+    public function planoMaquininha()
+    {
+        return $this->belongsTo(PlanoMaquininha::class);
+    }
+
+    public function bandeira()
+    {
+        return $this->belongsTo(Bandeira::class);
     }
 }

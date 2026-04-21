@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\Api\BancoController;
+use App\Http\Controllers\Api\BandeiraController;
 use App\Http\Controllers\Api\CaixaController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\FornecedorController;
 use App\Http\Controllers\Api\LojaController;
 use App\Http\Controllers\Api\PagamentoController;
+use App\Http\Controllers\Api\PlanoMaquininhaController;
 use App\Http\Controllers\Api\MovimentacaoInternaController;
 use App\Http\Controllers\Api\ProdutoController;
 use App\Http\Controllers\Api\UsuarioController;
@@ -44,6 +46,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('bancos', [BancoController::class, 'index']);
     Route::get('bancos/{banco}', [BancoController::class, 'show']);
 
+    // Bandeiras e Plano ativo (leitura para todos — usado no form de entrada por cartao)
+    Route::get('bandeiras', [BandeiraController::class, 'index']);
+    Route::get('planos-maquininha/ativo', [PlanoMaquininhaController::class, 'ativo']);
+
     // Movimentacoes Internas (CRUD para todos, aprovacao admin via middleware no controller)
     Route::apiResource('movimentacoes-internas', MovimentacaoInternaController::class);
     Route::post('movimentacoes-internas/{movimentacoes_interna}/aprovar', [MovimentacaoInternaController::class, 'aprovar']);
@@ -67,6 +73,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('bancos', [BancoController::class, 'store']);
         Route::put('bancos/{banco}', [BancoController::class, 'update']);
         Route::delete('bancos/{banco}', [BancoController::class, 'destroy']);
+
+        // Bandeiras (escrita)
+        Route::post('bandeiras', [BandeiraController::class, 'store']);
+        Route::get('bandeiras/{bandeira}', [BandeiraController::class, 'show']);
+        Route::put('bandeiras/{bandeira}', [BandeiraController::class, 'update']);
+        Route::delete('bandeiras/{bandeira}', [BandeiraController::class, 'destroy']);
+
+        // Planos de Maquininha
+        Route::get('planos-maquininha', [PlanoMaquininhaController::class, 'index']);
+        Route::post('planos-maquininha', [PlanoMaquininhaController::class, 'store']);
+        Route::get('planos-maquininha/{plano}', [PlanoMaquininhaController::class, 'show']);
+        Route::put('planos-maquininha/{plano}', [PlanoMaquininhaController::class, 'update']);
+        Route::delete('planos-maquininha/{plano}', [PlanoMaquininhaController::class, 'destroy']);
 
         // Fornecedores (escrita)
         Route::post('fornecedores', [FornecedorController::class, 'store']);

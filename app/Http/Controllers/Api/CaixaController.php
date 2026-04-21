@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\EntradaCaixaRequest;
+use App\Models\Bandeira;
 use App\Models\CaixaDiario;
 use App\Models\EntradaCaixa;
+use App\Models\PlanoMaquininha;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -21,7 +23,7 @@ class CaixaController extends Controller
         $lojaId = auth()->user()->loja_id;
         $hoje = Carbon::today();
 
-        $caixa = CaixaDiario::with(['entradas.banco', 'fechadoPor'])
+        $caixa = CaixaDiario::with(['entradas.banco', 'entradas.bandeira', 'fechadoPor'])
             ->where('loja_id', $lojaId)
             ->where('data', $hoje)
             ->first();
@@ -65,10 +67,68 @@ class CaixaController extends Controller
             return response()->json(['message' => 'Caixa nao esta aberto.'], 422);
         }
 
-        $entrada = $caixa->entradas()->create($request->validated());
+        $dados = $request->validated();
+        $forma = $dados['forma_recebimento'];
+        $ehCartao = in_array($forma, ['cartao_debito', 'cartao_credito']);
+
+        if ($ehCartao) {
+            $lojaId = $caixa->loja_id;
+
+            $bandeira = Bandeira::where('id', $dados['bandeira_id'])
+                ->where('loja_id', $lojaId)
+                ->where('ativo', true)
+                ->first();
+
+            if (!$bandeira) {
+                return response()->json(['message' => 'Bandeira invalida para esta loja.'], 422);
+            }
+
+            $plano = PlanoMaquininha::where('loja_id', $lojaId)
+                ->where('ativo', true)
+                ->first();
+
+            if (!$plano) {
+                return response()->json(['message' => 'Nenhum plano de maquininha ativo. Cadastre um plano antes de registrar vendas por cartao.'], 422);
+            }
+
+            $parcelas = $forma === 'cartao_credito' ? (int) $dados['parcelas'] : 1;
+            $modalidade = PlanoMaquininha::modalidadePara($forma, $parcelas);
+
+            if (!$modalidade) {
+                return response()->json(['message' => 'Modalidade invalida.'], 422);
+            }
+
+            $valorBruto = (float) $dados['valor'];
+            $calc = $plano->calcularLiquido($valorBruto, $bandeira->id, $modalidade, $forma === 'cartao_credito');
+
+            if (!$calc['ok']) {
+                return response()->json(['message' => $calc['erro']], 422);
+            }
+
+            $entrada = $caixa->entradas()->create([
+                'forma_recebimento' => $forma,
+                'banco_id' => $dados['banco_id'] ?? null,
+                'plano_maquininha_id' => $plano->id,
+                'bandeira_id' => $bandeira->id,
+                'parcelas' => $parcelas,
+                'taxa_aplicada' => $calc['taxa_total'],
+                'valor_bruto' => $valorBruto,
+                'com_antecipacao' => $calc['com_antecipacao'],
+                'valor' => $calc['valor_liquido'],
+                'descricao' => $dados['descricao'] ?? null,
+            ]);
+        } else {
+            $entrada = $caixa->entradas()->create([
+                'forma_recebimento' => $forma,
+                'banco_id' => $dados['banco_id'] ?? null,
+                'valor' => $dados['valor'],
+                'descricao' => $dados['descricao'] ?? null,
+            ]);
+        }
+
         $caixa->recalcular();
 
-        return response()->json($entrada->load('banco'), 201);
+        return response()->json($entrada->load(['banco', 'bandeira', 'planoMaquininha']), 201);
     }
 
     public function removerEntrada(CaixaDiario $caixa, EntradaCaixa $entrada)
@@ -183,7 +243,7 @@ class CaixaController extends Controller
 
     public function show(CaixaDiario $caixa)
     {
-        $caixa->load(['entradas.banco', 'fechadoPor']);
+        $caixa->load(['entradas.banco', 'entradas.bandeira', 'fechadoPor']);
 
         $totaisPorForma = $caixa->entradas()
             ->selectRaw('forma_recebimento, SUM(valor) as total')

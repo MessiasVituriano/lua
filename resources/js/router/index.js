@@ -12,6 +12,10 @@ import LojasForm from '../pages/lojas/Form.vue';
 import LojasUsuarios from '../pages/lojas/Usuarios.vue';
 import BancosIndex from '../pages/bancos/Index.vue';
 import BancosForm from '../pages/bancos/Form.vue';
+import BandeirasIndex from '../pages/bandeiras/Index.vue';
+import BandeirasForm from '../pages/bandeiras/Form.vue';
+import PlanosMaquininhaIndex from '../pages/planos-maquininha/Index.vue';
+import PlanosMaquininhaForm from '../pages/planos-maquininha/Form.vue';
 import FornecedoresIndex from '../pages/fornecedores/Index.vue';
 import FornecedoresForm from '../pages/fornecedores/Form.vue';
 import FornecedoresShow from '../pages/fornecedores/Show.vue';
@@ -55,6 +59,14 @@ const routes = [
             { path: 'bancos', name: 'bancos.index', component: BancosIndex },
             { path: 'bancos/criar', name: 'bancos.create', component: BancosForm },
             { path: 'bancos/:id/editar', name: 'bancos.edit', component: BancosForm },
+            // Bandeiras
+            { path: 'bandeiras', name: 'bandeiras.index', component: BandeirasIndex },
+            { path: 'bandeiras/criar', name: 'bandeiras.create', component: BandeirasForm },
+            { path: 'bandeiras/:id/editar', name: 'bandeiras.edit', component: BandeirasForm },
+            // Planos de Maquininha
+            { path: 'planos-maquininha', name: 'planos-maquininha.index', component: PlanosMaquininhaIndex },
+            { path: 'planos-maquininha/criar', name: 'planos-maquininha.create', component: PlanosMaquininhaForm },
+            { path: 'planos-maquininha/:id/editar', name: 'planos-maquininha.edit', component: PlanosMaquininhaForm },
             // Fornecedores
             { path: 'fornecedores', name: 'fornecedores.index', component: FornecedoresIndex },
             { path: 'fornecedores/criar', name: 'fornecedores.create', component: FornecedoresForm },
@@ -109,6 +121,8 @@ router.beforeEach(async (to, from, next) => {
     // Bloquear rotas admin para atendentes
     const adminRoutes = ['dashboard', 'lojas.index', 'lojas.create', 'lojas.edit', 'lojas.usuarios',
         'bancos.index', 'bancos.create', 'bancos.edit', 'usuarios.index', 'usuarios.create', 'usuarios.edit',
+        'bandeiras.index', 'bandeiras.create', 'bandeiras.edit',
+        'planos-maquininha.index', 'planos-maquininha.create', 'planos-maquininha.edit',
         'caixa.historico', 'pagamentos.index', 'pagamentos.calendario', 'pagamentos.create', 'pagamentos.edit'];
     if (auth.user && auth.user.role !== 'admin' && adminRoutes.includes(to.name)) {
         return next({ name: 'caixa.hoje' });

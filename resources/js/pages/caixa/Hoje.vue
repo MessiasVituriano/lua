@@ -81,7 +81,7 @@
                             </select>
                         </div>
                         <div class="col-6 col-md-2">
-                            <label class="form-label small">Valor *</label>
+                            <label class="form-label small">{{ ehCartao ? 'Valor bruto *' : 'Valor *' }}</label>
                             <input type="number" step="0.01" min="0.01" class="form-control" v-model="form.valor" required ref="valorInput">
                         </div>
                         <div class="col-6 col-md-3">
@@ -93,6 +93,38 @@
                                 <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>
                                 <i v-else class="bi bi-plus-lg"></i> Adicionar
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Campos especificos de cartao -->
+                    <div v-if="ehCartao" class="row g-3 align-items-end mt-1">
+                        <div class="col-6 col-md-3">
+                            <label class="form-label small">Bandeira *</label>
+                            <select class="form-select" v-model="form.bandeira_id" required>
+                                <option :value="null">Selecione...</option>
+                                <option v-for="b in bandeirasDisponiveis" :key="b.id" :value="b.id">{{ b.nome }}</option>
+                            </select>
+                        </div>
+                        <div v-if="form.forma_recebimento === 'cartao_credito'" class="col-6 col-md-2">
+                            <label class="form-label small">Parcelas *</label>
+                            <select class="form-select" v-model.number="form.parcelas" required>
+                                <option v-for="n in 12" :key="n" :value="n">{{ n }}x</option>
+                            </select>
+                        </div>
+                        <div class="col-md-7">
+                            <div v-if="!planoAtivo" class="alert alert-warning py-2 mb-0 small">
+                                Nenhum plano de maquininha ativo. <router-link :to="{ name: 'planos-maquininha.create' }">Cadastrar plano</router-link>.
+                            </div>
+                            <div v-else-if="previewCalc" class="alert py-2 mb-0 small" :class="previewCalc.erro ? 'alert-danger' : 'alert-info'">
+                                <div v-if="previewCalc.erro">{{ previewCalc.erro }}</div>
+                                <div v-else>
+                                    Taxa aplicada: <strong>{{ fmtPct(previewCalc.taxa_total) }}</strong>
+                                    <span v-if="previewCalc.com_antecipacao" class="text-muted">
+                                        (taxa {{ fmtPct(previewCalc.taxa) }} + antecipacao {{ fmtPct(previewCalc.taxa_antecipacao) }})
+                                    </span>
+                                    — Valor liquido: <strong>R$ {{ fmt(previewCalc.valor_liquido) }}</strong>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -147,9 +179,21 @@
                         <TransitionGroup tag="tbody" name="row">
                             <tr v-for="e in entradasOrdenadas" :key="e.id" :class="{ 'table-success': e._new }">
                                 <td class="text-muted small">{{ fmtHora(e.created_at) }}</td>
-                                <td><span class="badge" :class="formaBadge(e.forma_recebimento)">{{ formas[e.forma_recebimento] }}</span></td>
+                                <td>
+                                    <span class="badge" :class="formaBadge(e.forma_recebimento)">{{ formas[e.forma_recebimento] }}</span>
+                                    <div v-if="e.bandeira_id || e.bandeira" class="small text-muted mt-1">
+                                        {{ e.bandeira?.nome || '' }}
+                                        <span v-if="e.parcelas">· {{ e.parcelas }}x</span>
+                                        <span v-if="e.taxa_aplicada">· taxa {{ fmtPct(e.taxa_aplicada) }}</span>
+                                    </div>
+                                </td>
                                 <td>{{ bancoNome(e.banco_id) }}</td>
-                                <td class="fw-semibold text-success">R$ {{ fmt(e.valor) }}</td>
+                                <td class="fw-semibold text-success">
+                                    R$ {{ fmt(e.valor) }}
+                                    <div v-if="e.valor_bruto && parseFloat(e.valor_bruto) !== parseFloat(e.valor)" class="small text-muted fw-normal">
+                                        bruto R$ {{ fmt(e.valor_bruto) }}
+                                    </div>
+                                </td>
                                 <td>{{ e.descricao || '-' }}</td>
                                 <td v-if="caixa.status === 'aberto'">
                                     <button class="btn btn-sm btn-outline-danger" @click="removerEntrada(e)" :disabled="e._removing">
@@ -191,7 +235,63 @@ let pollTimer = null;
 
 const formas = { dinheiro: 'Dinheiro', pix: 'PIX', cartao_debito: 'Cartao Debito', cartao_credito: 'Cartao Credito' };
 const dataHoje = new Date().toLocaleDateString('pt-BR');
-const form = reactive({ forma_recebimento: '', banco_id: null, valor: '', descricao: '' });
+const form = reactive({
+    forma_recebimento: '',
+    banco_id: null,
+    valor: '',
+    descricao: '',
+    bandeira_id: null,
+    parcelas: 1,
+});
+
+const planoAtivo = ref(null); // { plano, bandeiras: [{ id, nome, taxas: { debito, credito_avista, ... } }] }
+
+const ehCartao = computed(() => ['cartao_debito', 'cartao_credito'].includes(form.forma_recebimento));
+
+const bandeirasDisponiveis = computed(() => {
+    if (!planoAtivo.value) return [];
+    const mod = modalidadeAtual.value;
+    return planoAtivo.value.bandeiras.filter(b => {
+        return !mod || b.taxas?.[mod] !== null && b.taxas?.[mod] !== undefined;
+    });
+});
+
+const modalidadeAtual = computed(() => {
+    if (form.forma_recebimento === 'cartao_debito') return 'debito';
+    if (form.forma_recebimento !== 'cartao_credito' || !form.parcelas) return null;
+    if (form.parcelas === 1) return 'credito_avista';
+    if (form.parcelas >= 2 && form.parcelas <= 6) return 'credito_2_6';
+    if (form.parcelas >= 7 && form.parcelas <= 12) return 'credito_7_12';
+    return null;
+});
+
+const previewCalc = computed(() => {
+    if (!ehCartao.value || !planoAtivo.value || !form.bandeira_id || !form.valor) return null;
+    const mod = modalidadeAtual.value;
+    if (!mod) return null;
+
+    const bandeira = planoAtivo.value.bandeiras.find(b => b.id === form.bandeira_id);
+    if (!bandeira) return null;
+
+    const taxa = bandeira.taxas?.[mod];
+    if (taxa === null || taxa === undefined) {
+        return { erro: 'Esta bandeira nao aceita esta modalidade neste plano.' };
+    }
+
+    const isCredito = form.forma_recebimento === 'cartao_credito';
+    const taxaAnt = isCredito && planoAtivo.value.plano.taxa_antecipacao ? parseFloat(planoAtivo.value.plano.taxa_antecipacao) : 0;
+    const taxaTotal = parseFloat(taxa) + taxaAnt;
+    const bruto = parseFloat(form.valor);
+    const liquido = Math.round(bruto * (1 - taxaTotal / 100) * 100) / 100;
+
+    return {
+        taxa: parseFloat(taxa),
+        taxa_antecipacao: taxaAnt,
+        taxa_total: taxaTotal,
+        valor_liquido: liquido,
+        com_antecipacao: taxaAnt > 0,
+    };
+});
 
 // Totais calculados localmente (instantaneo)
 const totalEntradas = computed(() => entradas.value.reduce((s, e) => s + parseFloat(e.valor || 0), 0));
@@ -210,6 +310,12 @@ const entradasOrdenadas = computed(() => [...entradas.value].sort((a, b) => {
 function onFormaChange() {
     if (form.forma_recebimento === 'dinheiro') {
         form.banco_id = null;
+    }
+    if (!ehCartao.value) {
+        form.bandeira_id = null;
+        form.parcelas = 1;
+    } else if (form.forma_recebimento === 'cartao_debito') {
+        form.parcelas = 1;
     }
 }
 
@@ -313,14 +419,25 @@ async function adicionarEntrada() {
     if (!form.forma_recebimento || !form.valor) return;
     saving.value = true;
 
+    // Para cartao: exibir valor liquido na entrada local (consistente com o que o backend vai salvar)
+    const isCartao = ehCartao.value;
+    const valorLocal = isCartao && previewCalc.value && !previewCalc.value.erro
+        ? previewCalc.value.valor_liquido
+        : parseFloat(form.valor);
+
     // Criar entrada temporaria local
     const tempId = 'temp_' + Date.now();
     const entradaLocal = {
         id: tempId,
         forma_recebimento: form.forma_recebimento,
         banco_id: form.banco_id,
-        valor: parseFloat(form.valor),
+        bandeira_id: form.bandeira_id,
+        parcelas: isCartao ? form.parcelas : null,
+        valor_bruto: isCartao ? parseFloat(form.valor) : null,
+        taxa_aplicada: isCartao && previewCalc.value ? previewCalc.value.taxa_total : null,
+        valor: valorLocal,
         descricao: form.descricao || null,
+        bandeira: isCartao ? planoAtivo.value?.bandeiras.find(b => b.id === form.bandeira_id) : null,
         created_at: new Date().toISOString(),
         _new: true,
         _saving: true,
@@ -334,6 +451,8 @@ async function adicionarEntrada() {
         banco_id: form.banco_id || null,
         valor: form.valor,
         descricao: form.descricao || null,
+        bandeira_id: isCartao ? form.bandeira_id : null,
+        parcelas: isCartao ? form.parcelas : null,
     };
     form.valor = '';
     form.descricao = '';
@@ -430,14 +549,24 @@ async function autorizarCaixa() {
 }
 
 function fmt(v) { return Number(v || 0).toFixed(2).replace('.', ','); }
+function fmtPct(v) { return Number(v || 0).toFixed(2).replace('.', ',') + ' %'; }
 function fmtDt(d) { return d ? new Date(d).toLocaleString('pt-BR') : ''; }
 function fmtHora(d) {
     if (!d) return '';
     return new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+async function loadPlanoAtivo() {
+    try {
+        const { data } = await axios.get('/planos-maquininha/ativo');
+        planoAtivo.value = data;
+    } catch {
+        planoAtivo.value = null;
+    }
+}
+
 onMounted(async () => {
-    const [, bancosRes] = await Promise.all([load(), axios.get('/bancos')]);
+    const [, bancosRes] = await Promise.all([load(), axios.get('/bancos'), loadPlanoAtivo()]);
     bancos.value = bancosRes.data.filter(b => b.ativo);
     bancosMap.value = Object.fromEntries(bancosRes.data.map(b => [b.id, b.nome]));
 

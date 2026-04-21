@@ -31,6 +31,14 @@
                     <Building2 :size="16" class="nav-icon" />
                     <span>Bancos</span>
                 </router-link>
+                <router-link class="nav-item" active-class="active" :to="{ name: 'bandeiras.index' }" @click="closeMobile">
+                    <CreditCard :size="16" class="nav-icon" />
+                    <span>Bandeiras</span>
+                </router-link>
+                <router-link class="nav-item" active-class="active" :to="{ name: 'planos-maquininha.index' }" @click="closeMobile">
+                    <Layers :size="16" class="nav-icon" />
+                    <span>Plano Maquininha</span>
+                </router-link>
             </template>
 
             <router-link class="nav-item" active-class="active" :to="{ name: 'fornecedores.index' }" @click="closeMobile">
@@ -165,7 +173,7 @@ import axios from 'axios';
 import {
     Moon, Sun, Menu, X, LogOut, Store, Building2, Truck, Wallet,
     ArrowLeftRight, History, CalendarCheck, CalendarDays, Package,
-    Users, LayoutDashboard, AlertTriangle
+    Users, LayoutDashboard, AlertTriangle, CreditCard, Layers
 } from 'lucide-vue-next';
 
 const route = useRoute();
@@ -192,6 +200,8 @@ const titles = {
     'dashboard': 'Dashboard',
     'lojas.index': 'Lojas', 'lojas.create': 'Nova Loja', 'lojas.edit': 'Editar Loja', 'lojas.usuarios': 'Usuários da Loja',
     'bancos.index': 'Bancos', 'bancos.create': 'Novo Banco', 'bancos.edit': 'Editar Banco',
+    'bandeiras.index': 'Bandeiras', 'bandeiras.create': 'Nova Bandeira', 'bandeiras.edit': 'Editar Bandeira',
+    'planos-maquininha.index': 'Planos de Maquininha', 'planos-maquininha.create': 'Novo Plano', 'planos-maquininha.edit': 'Editar Plano',
     'fornecedores.index': 'Fornecedores', 'fornecedores.create': 'Novo Fornecedor', 'fornecedores.show': 'Detalhes do Fornecedor', 'fornecedores.edit': 'Editar Fornecedor',
     'usuarios.index': 'Usuários', 'usuarios.create': 'Novo Usuário', 'usuarios.edit': 'Editar Usuário',
     'caixa.hoje': 'Caixa do Dia', 'caixa.historico': 'Histórico de Caixa', 'caixa.show': 'Detalhes do Caixa',
