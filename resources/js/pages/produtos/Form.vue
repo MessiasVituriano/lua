@@ -73,7 +73,7 @@ const loading = ref(false);
 const errors = reactive({});
 const isEdit = computed(() => !!route.params.id);
 const fornecedores = ref([]);
-const categorias = { racao: 'Ração', medicamento: 'Medicamento', acessorio: 'Acessório', higiene: 'Higiene' };
+const categorias = { racao: 'Ração', medicamento: 'Medicamento', acessorio: 'Acessório', higiene: 'Higiene', petisco: 'Petisco' };
 
 const form = reactive({
     nome: '', categoria: '', fornecedor_id: '',

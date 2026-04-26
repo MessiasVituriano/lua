@@ -54,7 +54,7 @@ const router = useRouter();
 const loading = ref(false);
 const errors = reactive({});
 const isEdit = computed(() => !!route.params.id);
-const categorias = { racao: 'Ração', medicamento: 'Medicamento', acessorio: 'Acessório', higiene: 'Higiene', outros: 'Outros' };
+const categorias = { racao: 'Ração', medicamento: 'Medicamento', acessorio: 'Acessório', higiene: 'Higiene', petisco: 'Petisco', outros: 'Outros' };
 const form = reactive({ nome: '', categoria: '', telefone: '', ativo: true });
 
 onMounted(async () => {

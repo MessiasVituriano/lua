@@ -55,7 +55,7 @@ import axios from 'axios';
 
 const route = useRoute();
 const fornecedor = ref(null);
-const categorias = { racao: 'Ração', medicamento: 'Medicamento', acessorio: 'Acessório', higiene: 'Higiene', outros: 'Outros' };
+const categorias = { racao: 'Ração', medicamento: 'Medicamento', acessorio: 'Acessório', higiene: 'Higiene', petisco: 'Petisco', outros: 'Outros' };
 
 onMounted(async () => {
     const { data } = await axios.get('/fornecedores/' + route.params.id);

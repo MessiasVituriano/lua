@@ -85,7 +85,7 @@ import { ref, reactive, onMounted } from 'vue';
 import axios from 'axios';
 import { swalSuccess, swalError, swalConfirmDanger } from '../../utils/swal';
 const fornecedores = ref([]);
-const categorias = { racao: 'Ração', medicamento: 'Medicamento', acessorio: 'Acessório', higiene: 'Higiene', outros: 'Outros' };
+const categorias = { racao: 'Ração', medicamento: 'Medicamento', acessorio: 'Acessório', higiene: 'Higiene', petisco: 'Petisco', outros: 'Outros' };
 const filters = reactive({ busca: '', categoria: '', ativo: '' });
 
 async function load() {

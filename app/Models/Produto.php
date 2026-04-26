@@ -35,6 +35,7 @@ class Produto extends Model
         'medicamento' => 'Medicamento',
         'acessorio' => 'Acessório',
         'higiene' => 'Higiene',
+        'petisco' => 'Petisco',
     ];
 
     public static function calcularValorVenda(float $custo, float $margem): float

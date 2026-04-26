@@ -60,6 +60,9 @@
                                 <button v-if="c.status === 'pendente'" class="btn btn-sm btn-outline-success" @click="autorizar(c)" title="Autorizar fechamento">
                                     <i class="bi bi-check-lg"></i>
                                 </button>
+                                <button v-if="userIsAdmin && c.status !== 'aberto'" class="btn btn-sm btn-outline-primary" @click="reabrir(c)" title="Reabrir caixa">
+                                    <i class="bi bi-unlock"></i>
+                                </button>
                             </td>
                         </tr>
                         <tr v-if="caixas.length === 0">
@@ -73,9 +76,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import axios from 'axios';
-import { swalSuccess, swalError, swalConfirmSuccess } from '../../utils/swal';
+import { useAuthStore } from '../../stores/auth';
+import { swalSuccess, swalError, swalConfirmSuccess, swalConfirmInfo } from '../../utils/swal';
+const auth = useAuthStore();
+const userIsAdmin = computed(() => auth.user?.role === 'admin');
 const caixas = ref([]);
 const filters = reactive({ data_inicio: '', data_fim: '', status: '' });
 
@@ -111,6 +117,17 @@ async function autorizar(c) {
         load();
     } catch (e) {
         swalError(e.response?.data?.message || 'Erro ao autorizar.');
+    }
+}
+
+async function reabrir(c) {
+    if (!(await swalConfirmInfo('Reabrir caixa?', 'Caixa de ' + fmtDate(c.data) + '. As entradas serao preservadas.'))) return;
+    try {
+        await axios.post('/caixa/' + c.id + '/reabrir');
+        swalSuccess('Caixa reaberto com sucesso.');
+        load();
+    } catch (e) {
+        swalError(e.response?.data?.message || 'Erro ao reabrir caixa.');
     }
 }
 

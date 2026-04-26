@@ -16,7 +16,7 @@ class FornecedorRequest extends FormRequest
     {
         return [
             'nome' => ['required', 'string', 'max:255'],
-            'categoria' => ['required', Rule::in(['racao', 'medicamento', 'acessorio', 'higiene', 'outros'])],
+            'categoria' => ['required', Rule::in(['racao', 'medicamento', 'acessorio', 'higiene', 'petisco', 'outros'])],
             'telefone' => ['nullable', 'string', 'max:20'],
             'ativo' => ['boolean'],
         ];

@@ -28,6 +28,7 @@ class Fornecedor extends Model
         'medicamento' => 'Medicamento',
         'acessorio' => 'Acessório',
         'higiene' => 'Higiene',
+        'petisco' => 'Petisco',
         'outros' => 'Outros',
     ];
 }
