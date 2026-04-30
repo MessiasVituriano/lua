@@ -1,8 +1,8 @@
 <template>
     <div>
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <!-- Alertas -->
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-wrap">
                 <span v-if="alertas.total_atrasados > 0" class="badge bg-danger fs-6">
                     <i class="bi bi-exclamation-triangle"></i> {{ alertas.total_atrasados }} atrasado(s)
                 </span>
@@ -10,7 +10,7 @@
                     <i class="bi bi-clock"></i> {{ alertas.total_proximos }} vencendo em 7 dias
                 </span>
             </div>
-            <router-link :to="{ name: 'pagamentos.create' }" class="btn btn-lua">
+            <router-link :to="{ name: 'pagamentos.create' }" class="btn btn-lua flex-shrink-0">
                 <i class="bi bi-plus-lg"></i> Novo Pagamento
             </router-link>
         </div>
@@ -18,7 +18,7 @@
         <!-- Filtros -->
         <div class="card p-3 mb-4">
             <div class="row g-2 align-items-end">
-                <div class="col-md-2">
+                <div class="col-6 col-md-2">
                     <label class="form-label small">Status</label>
                     <select class="form-select form-select-sm" v-model="filters.status">
                         <option value="">Todos</option>
@@ -28,24 +28,24 @@
                         <option value="parcial">Parcial</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-6 col-md-2">
                     <label class="form-label small">Categoria</label>
                     <select class="form-select form-select-sm" v-model="filters.categoria">
                         <option value="">Todas</option>
                         <option v-for="(l, k) in categorias" :key="k" :value="k">{{ l }}</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-6 col-md-2">
                     <label class="form-label small">De</label>
                     <input type="date" class="form-control form-control-sm" v-model="filters.data_inicio">
                 </div>
-                <div class="col-md-2">
+                <div class="col-6 col-md-2">
                     <label class="form-label small">Ate</label>
                     <input type="date" class="form-control form-control-sm" v-model="filters.data_fim">
                 </div>
-                <div class="col-md-4 d-flex gap-2">
-                    <button class="btn btn-sm btn-lua" @click="load"><i class="bi bi-search"></i> Filtrar</button>
-                    <button class="btn btn-sm btn-outline-secondary" @click="clearFilters">Limpar</button>
+                <div class="col-12 col-md-4 d-flex gap-2 flex-wrap">
+                    <button class="btn btn-sm btn-lua flex-grow-1 flex-md-grow-0" @click="load"><i class="bi bi-search"></i> Filtrar</button>
+                    <button class="btn btn-sm btn-outline-secondary flex-grow-1 flex-md-grow-0" @click="clearFilters">Limpar</button>
                 </div>
             </div>
         </div>
@@ -84,11 +84,11 @@
                     <thead>
                         <tr>
                             <th>Descricao</th>
-                            <th>Categoria</th>
-                            <th>Fornecedor</th>
+                            <th class="d-none d-md-table-cell">Categoria</th>
+                            <th class="d-none d-lg-table-cell">Fornecedor</th>
                             <th>Vencimento</th>
                             <th>Valor</th>
-                            <th>Pago</th>
+                            <th class="d-none d-md-table-cell">Pago</th>
                             <th>Status</th>
                             <th width="180">Acoes</th>
                         </tr>
@@ -98,12 +98,16 @@
                             <td class="fw-semibold">
                                 {{ p.descricao }}
                                 <i v-if="p.recorrente" class="bi bi-arrow-repeat text-muted" title="Recorrente"></i>
+                                <div class="d-md-none small text-muted">
+                                    <span class="badge bg-secondary">{{ categorias[p.categoria] }}</span>
+                                    <span v-if="p.fornecedor" class="ms-1">· {{ p.fornecedor.nome }}</span>
+                                </div>
                             </td>
-                            <td><span class="badge bg-secondary">{{ categorias[p.categoria] }}</span></td>
-                            <td>{{ p.fornecedor?.nome || '-' }}</td>
+                            <td class="d-none d-md-table-cell"><span class="badge bg-secondary">{{ categorias[p.categoria] }}</span></td>
+                            <td class="d-none d-lg-table-cell">{{ p.fornecedor?.nome || '-' }}</td>
                             <td>{{ fmtDate(p.data_vencimento) }}</td>
                             <td>R$ {{ fmt(p.valor_total) }}</td>
-                            <td>R$ {{ fmt(p.valor_pago) }}</td>
+                            <td class="d-none d-md-table-cell">R$ {{ fmt(p.valor_pago) }}</td>
                             <td>
                                 <span class="badge" :class="statusClass(p.status)">{{ statusLabel(p.status) }}</span>
                             </td>
@@ -190,7 +194,10 @@ const totais = ref({ total_geral: 0, total_pago: 0, total_pendente: 0, count: 0 
 const alertas = ref({ total_atrasados: 0, total_proximos: 0 });
 const bancos = ref([]);
 const categorias = { boleto: 'Boleto', imposto: 'Imposto', custo_fixo: 'Custo Fixo', funcionario: 'Funcionário', fornecedor: 'Fornecedor', outros: 'Outros' };
-const filters = reactive({ status: '', categoria: '', data_inicio: '', data_fim: '' });
+const hoje = new Date();
+const inicioMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10);
+const fimMesAtual = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().slice(0, 10);
+const filters = reactive({ status: '', categoria: '', data_inicio: inicioMesAtual, data_fim: fimMesAtual });
 const pagamentoSelecionado = ref(null);
 const pgForm = reactive({ valor_pago: '', forma_pagamento: '', banco_id: '', data_pagamento: new Date().toISOString().slice(0, 10) });
 const pgLoading = ref(false);

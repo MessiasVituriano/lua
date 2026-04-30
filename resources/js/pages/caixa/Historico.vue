@@ -3,15 +3,15 @@
         <!-- Filtros -->
         <div class="card p-3 mb-3">
             <div class="row g-2 align-items-end">
-                <div class="col-md-3">
+                <div class="col-6 col-md-3">
                     <label class="form-label small">Data Inicio</label>
                     <input type="date" class="form-control form-control-sm" v-model="filters.data_inicio">
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md-3">
                     <label class="form-label small">Data Fim</label>
                     <input type="date" class="form-control form-control-sm" v-model="filters.data_fim">
                 </div>
-                <div class="col-md-2">
+                <div class="col-6 col-md-2">
                     <label class="form-label small">Status</label>
                     <select class="form-select form-select-sm" v-model="filters.status">
                         <option value="">Todos</option>
@@ -20,10 +20,10 @@
                         <option value="fechado">Fechado</option>
                     </select>
                 </div>
-                <div class="col-md-4 d-flex gap-2 flex-wrap">
-                    <button class="btn btn-sm btn-lua" @click="load"><i class="bi bi-search"></i> Filtrar</button>
-                    <button class="btn btn-sm btn-outline-secondary" @click="clearFilters">Limpar</button>
-                    <button v-if="userIsAdmin" class="btn btn-sm btn-outline-primary ms-auto" @click="abrirModalRetro">
+                <div class="col-12 col-md-4 d-flex gap-2 flex-wrap">
+                    <button class="btn btn-sm btn-lua flex-grow-1 flex-md-grow-0" @click="load"><i class="bi bi-search"></i> Filtrar</button>
+                    <button class="btn btn-sm btn-outline-secondary flex-grow-1 flex-md-grow-0" @click="clearFilters">Limpar</button>
+                    <button v-if="userIsAdmin" class="btn btn-sm btn-outline-primary btn-retro flex-grow-1 flex-md-grow-0" @click="abrirModalRetro">
                         <i class="bi bi-calendar-plus"></i> Abrir caixa retroativo
                     </button>
                 </div>
@@ -68,24 +68,29 @@
                             <th>Data</th>
                             <th>Entradas</th>
                             <th>Saidas</th>
-                            <th>Saldo</th>
+                            <th class="d-none d-md-table-cell">Saldo</th>
                             <th>Status</th>
-                            <th>Fechado por</th>
+                            <th class="d-none d-lg-table-cell">Fechado por</th>
                             <th width="80">Acoes</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="c in caixas" :key="c.id">
-                            <td class="fw-semibold">{{ fmtDate(c.data) }}</td>
+                            <td class="fw-semibold">
+                                {{ fmtDate(c.data) }}
+                                <div class="d-md-none small fw-normal" :class="c.saldo >= 0 ? 'text-primary' : 'text-danger'">
+                                    saldo R$ {{ fmt(c.saldo) }}
+                                </div>
+                            </td>
                             <td class="text-success">R$ {{ fmt(c.total_entradas) }}</td>
                             <td class="text-danger">R$ {{ fmt(c.total_saidas) }}</td>
-                            <td :class="c.saldo >= 0 ? 'text-primary' : 'text-danger'" class="fw-bold">
+                            <td :class="c.saldo >= 0 ? 'text-primary' : 'text-danger'" class="fw-bold d-none d-md-table-cell">
                                 R$ {{ fmt(c.saldo) }}
                             </td>
                             <td>
                                 <span class="badge" :class="statusClass(c.status)">{{ statusLabel(c.status) }}</span>
                             </td>
-                            <td>{{ c.fechado_por?.name || '-' }}</td>
+                            <td class="d-none d-lg-table-cell">{{ c.fechado_por?.name || '-' }}</td>
                             <td class="d-flex gap-1">
                                 <router-link :to="{ name: 'caixa.show', params: { id: c.id } }" class="btn btn-sm btn-outline-info">
                                     <i class="bi bi-eye"></i>
@@ -107,8 +112,10 @@
                             <td>Totais do periodo</td>
                             <td class="text-success">R$ {{ fmt(totais.total_entradas) }}</td>
                             <td class="text-danger">R$ {{ fmt(totais.total_saidas) }}</td>
-                            <td :class="totais.saldo >= 0 ? 'text-primary' : 'text-danger'">R$ {{ fmt(totais.saldo) }}</td>
-                            <td colspan="3" class="text-muted small">{{ totais.count }} caixa(s)</td>
+                            <td :class="totais.saldo >= 0 ? 'text-primary' : 'text-danger'" class="d-none d-md-table-cell">R$ {{ fmt(totais.saldo) }}</td>
+                            <td class="text-muted small">{{ totais.count }} caixa(s)</td>
+                            <td class="d-none d-lg-table-cell"></td>
+                            <td></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -240,3 +247,9 @@ function fmtDate(d) { const s = typeof d === 'string' ? d.slice(0, 10) : d; retu
 
 onMounted(load);
 </script>
+
+<style scoped>
+@media (min-width: 768px) {
+    .btn-retro { margin-left: auto; }
+}
+</style>
