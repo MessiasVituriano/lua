@@ -1,7 +1,7 @@
 <template>
     <div>
         <!-- Filtros -->
-        <div class="card p-3 mb-4">
+        <div class="card p-3 mb-3">
             <div class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small">Data Inicio</label>
@@ -20,9 +20,42 @@
                         <option value="fechado">Fechado</option>
                     </select>
                 </div>
-                <div class="col-md-4 d-flex gap-2">
+                <div class="col-md-4 d-flex gap-2 flex-wrap">
                     <button class="btn btn-sm btn-lua" @click="load"><i class="bi bi-search"></i> Filtrar</button>
                     <button class="btn btn-sm btn-outline-secondary" @click="clearFilters">Limpar</button>
+                    <button v-if="userIsAdmin" class="btn btn-sm btn-outline-primary ms-auto" @click="abrirModalRetro">
+                        <i class="bi bi-calendar-plus"></i> Abrir caixa retroativo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumo do periodo -->
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-lg-3">
+                <div class="card p-3 border-start border-success border-4">
+                    <div class="text-muted small">Total Entradas</div>
+                    <div class="fs-5 fw-bold text-success">R$ {{ fmt(totais.total_entradas) }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card p-3 border-start border-danger border-4">
+                    <div class="text-muted small">Total Saidas (Pagamentos)</div>
+                    <div class="fs-5 fw-bold text-danger">R$ {{ fmt(totais.total_saidas) }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card p-3 border-start border-primary border-4">
+                    <div class="text-muted small">Saldo</div>
+                    <div class="fs-5 fw-bold" :class="totais.saldo >= 0 ? 'text-primary' : 'text-danger'">
+                        R$ {{ fmt(totais.saldo) }}
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card p-3 border-start border-secondary border-4">
+                    <div class="text-muted small">Caixas no periodo</div>
+                    <div class="fs-5 fw-bold">{{ totais.count || 0 }}</div>
                 </div>
             </div>
         </div>
@@ -69,21 +102,66 @@
                             <td colspan="7" class="text-center text-muted py-4">Nenhum registro encontrado.</td>
                         </tr>
                     </tbody>
+                    <tfoot v-if="caixas.length > 0">
+                        <tr class="table-light fw-bold">
+                            <td>Totais do periodo</td>
+                            <td class="text-success">R$ {{ fmt(totais.total_entradas) }}</td>
+                            <td class="text-danger">R$ {{ fmt(totais.total_saidas) }}</td>
+                            <td :class="totais.saldo >= 0 ? 'text-primary' : 'text-danger'">R$ {{ fmt(totais.saldo) }}</td>
+                            <td colspan="3" class="text-muted small">{{ totais.count }} caixa(s)</td>
+                        </tr>
+                    </tfoot>
                 </table>
+            </div>
+        </div>
+
+        <!-- Modal: Abrir caixa retroativo -->
+        <div class="modal fade" tabindex="-1" ref="modalRetroEl">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Abrir Caixa Retroativo</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-warning small mb-3">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Use esta opcao quando o caixa de uma data passada nao foi aberto. Apos abrir, voce podera adicionar entradas e fechar normalmente.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small">Data do caixa *</label>
+                            <input type="date" class="form-control" v-model="retroData" :max="hojeStr">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button class="btn btn-lua" @click="confirmarAbrirRetro" :disabled="retroLoading || !retroData">
+                            <span v-if="retroLoading" class="spinner-border spinner-border-sm me-1"></span>
+                            Abrir Caixa
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from '../../stores/auth';
 import { swalSuccess, swalError, swalConfirmSuccess, swalConfirmInfo } from '../../utils/swal';
 const auth = useAuthStore();
 const userIsAdmin = computed(() => auth.user?.role === 'admin');
 const caixas = ref([]);
+const totais = ref({ total_entradas: 0, total_saidas: 0, saldo: 0, count: 0 });
 const filters = reactive({ data_inicio: '', data_fim: '', status: '' });
+
+const modalRetroEl = ref(null);
+let modalRetroInstance = null;
+const retroData = ref('');
+const retroLoading = ref(false);
+const hojeStr = new Date().toISOString().slice(0, 10);
 
 async function load() {
     const params = {};
@@ -92,6 +170,7 @@ async function load() {
     if (filters.status) params.status = filters.status;
     const { data } = await axios.get('/caixa/historico', { params });
     caixas.value = data.data;
+    totais.value = data.totais || { total_entradas: 0, total_saidas: 0, saldo: 0, count: 0 };
 }
 
 function clearFilters() {
@@ -131,7 +210,32 @@ async function reabrir(c) {
     }
 }
 
-function fmt(v) { return Number(v || 0).toFixed(2).replace('.', ','); }
+function abrirModalRetro() {
+    retroData.value = '';
+    nextTick(() => {
+        if (!modalRetroInstance) {
+            modalRetroInstance = new window.bootstrap.Modal(modalRetroEl.value);
+        }
+        modalRetroInstance.show();
+    });
+}
+
+async function confirmarAbrirRetro() {
+    if (!retroData.value) return;
+    retroLoading.value = true;
+    try {
+        await axios.post('/caixa/abrir', { data: retroData.value });
+        modalRetroInstance.hide();
+        swalSuccess('Caixa aberto com sucesso. Adicione as entradas e feche normalmente.');
+        load();
+    } catch (e) {
+        swalError(e.response?.data?.message || 'Erro ao abrir caixa.');
+    } finally {
+        retroLoading.value = false;
+    }
+}
+
+function fmt(v) { return Number(v || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.').replace(/\.(\d{2})$/, ',$1'); }
 function fmtDate(d) { const s = typeof d === 'string' ? d.slice(0, 10) : d; return new Date(s + 'T12:00:00').toLocaleDateString('pt-BR'); }
 
 onMounted(load);

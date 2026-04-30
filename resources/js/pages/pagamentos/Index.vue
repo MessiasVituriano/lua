@@ -50,6 +50,34 @@
             </div>
         </div>
 
+        <!-- Resumo do periodo filtrado -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="card p-3 border-start border-secondary border-4">
+                    <div class="text-muted small">Total Geral</div>
+                    <div class="fs-5 fw-bold">R$ {{ fmt(totais.total_geral) }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card p-3 border-start border-success border-4">
+                    <div class="text-muted small">Total Pago</div>
+                    <div class="fs-5 fw-bold text-success">R$ {{ fmt(totais.total_pago) }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card p-3 border-start border-warning border-4">
+                    <div class="text-muted small">Total Pendente</div>
+                    <div class="fs-5 fw-bold text-warning">R$ {{ fmt(totais.total_pendente) }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card p-3 border-start border-info border-4">
+                    <div class="text-muted small">Pagamentos no filtro</div>
+                    <div class="fs-5 fw-bold">{{ totais.count || 0 }}</div>
+                </div>
+            </div>
+        </div>
+
         <div class="card">
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
@@ -158,6 +186,7 @@ import { ref, reactive, onMounted, nextTick } from 'vue';
 import axios from 'axios';
 import { swalSuccess, swalError, swalConfirmDanger } from '../../utils/swal';
 const pagamentos = ref([]);
+const totais = ref({ total_geral: 0, total_pago: 0, total_pendente: 0, count: 0 });
 const alertas = ref({ total_atrasados: 0, total_proximos: 0 });
 const bancos = ref([]);
 const categorias = { boleto: 'Boleto', imposto: 'Imposto', custo_fixo: 'Custo Fixo', funcionario: 'Funcionário', fornecedor: 'Fornecedor', outros: 'Outros' };
@@ -176,6 +205,7 @@ async function load() {
         axios.get('/pagamentos-alertas'),
     ]);
     pagamentos.value = pgRes.data.data;
+    totais.value = pgRes.data.totais || { total_geral: 0, total_pago: 0, total_pendente: 0, count: 0 };
     alertas.value = alRes.data;
 }
 

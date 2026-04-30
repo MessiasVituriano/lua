@@ -42,19 +42,32 @@ class CaixaController extends Controller
         ]);
     }
 
-    public function abrir()
+    public function abrir(Request $request)
     {
         $lojaId = auth()->user()->loja_id;
         $hoje = Carbon::today();
 
-        $existente = CaixaDiario::where('loja_id', $lojaId)->where('data', $hoje)->first();
+        $data = $hoje;
+        if ($request->filled('data')) {
+            $data = Carbon::parse($request->input('data'))->startOfDay();
+
+            if ($data->gt($hoje)) {
+                return response()->json(['message' => 'Nao e possivel abrir caixa em data futura.'], 422);
+            }
+
+            if ($data->lt($hoje) && !auth()->user()->isAdmin()) {
+                return response()->json(['message' => 'Apenas administradores podem abrir caixa retroativo.'], 403);
+            }
+        }
+
+        $existente = CaixaDiario::where('loja_id', $lojaId)->where('data', $data)->first();
         if ($existente) {
             return response()->json($existente);
         }
 
         $caixa = CaixaDiario::create([
             'loja_id' => $lojaId,
-            'data' => $hoje,
+            'data' => $data,
             'status' => 'aberto',
         ]);
 
@@ -238,7 +251,17 @@ class CaixaController extends Controller
             $query->where('status', $request->status);
         }
 
-        return response()->json($query->paginate(15));
+        $base = (clone $query);
+        $totais = [
+            'total_entradas' => (float) (clone $base)->sum('total_entradas'),
+            'total_saidas' => (float) (clone $base)->sum('total_saidas'),
+            'saldo' => (float) (clone $base)->sum('saldo'),
+            'count' => (clone $base)->count(),
+        ];
+
+        return response()->json(
+            $query->paginate(15)->additional(['totais' => $totais])
+        );
     }
 
     public function show(CaixaDiario $caixa)

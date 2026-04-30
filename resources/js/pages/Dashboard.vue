@@ -89,10 +89,12 @@
                         <div class="kpi-alert-row">
                             <span class="badge bg-danger">{{ d.pagamentos_atrasados }}</span>
                             <span>atrasados</span>
+                            <span class="ms-auto fw-semibold num-tabular text-danger">R$ {{ fmt(d.total_pagamentos_atrasados) }}</span>
                         </div>
                         <div class="kpi-alert-row">
                             <span class="badge bg-warning">{{ d.pagamentos_pendentes }}</span>
                             <span>pendentes</span>
+                            <span class="ms-auto fw-semibold num-tabular text-warning">R$ {{ fmt(d.total_pagamentos_pendentes) }}</span>
                         </div>
                         <div class="kpi-alert-row">
                             <span class="badge bg-info">{{ d.estoque_baixo }}</span>

@@ -47,6 +47,21 @@ class DashboardController extends Controller
             ->where('status', 'atrasado')
             ->count();
 
+        // Totais (R$) de pagamentos por status
+        $totalPagamentosPeriodo = (float) Pagamento::where('loja_id', $lojaId)
+            ->whereBetween('data_vencimento', [$inicio, $fim])
+            ->sum('valor_total');
+
+        $totalPagamentosPendentes = (float) Pagamento::where('loja_id', $lojaId)
+            ->whereIn('status', ['pendente', 'parcial'])
+            ->selectRaw('COALESCE(SUM(valor_total - valor_pago), 0) as total')
+            ->value('total');
+
+        $totalPagamentosAtrasados = (float) Pagamento::where('loja_id', $lojaId)
+            ->where('status', 'atrasado')
+            ->selectRaw('COALESCE(SUM(valor_total - valor_pago), 0) as total')
+            ->value('total');
+
         $estoqueBaixo = Produto::where('loja_id', $lojaId)
             ->where('ativo', true)
             ->whereNotNull('estoque_min')
@@ -194,6 +209,9 @@ class DashboardController extends Controller
             'caixas_abertos' => $caixasAbertos,
             'pagamentos_pendentes' => $pagamentosPendentes,
             'pagamentos_atrasados' => $pagamentosAtrasados,
+            'total_pagamentos_periodo' => $totalPagamentosPeriodo,
+            'total_pagamentos_pendentes' => $totalPagamentosPendentes,
+            'total_pagamentos_atrasados' => $totalPagamentosAtrasados,
             'estoque_baixo' => $estoqueBaixo,
 
             // Comparativo

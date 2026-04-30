@@ -45,8 +45,19 @@ class PagamentoController extends Controller
 
         $perPage = min((int) $request->input('per_page', 20), 200);
 
+        $base = (clone $query);
+        $totalGeral = (float) (clone $base)->sum('valor_total');
+        $totalPago = (float) (clone $base)->sum('valor_pago');
+
+        $totais = [
+            'total_geral' => $totalGeral,
+            'total_pago' => $totalPago,
+            'total_pendente' => $totalGeral - $totalPago,
+            'count' => (clone $base)->count(),
+        ];
+
         return response()->json(
-            $query->orderBy('data_vencimento')->paginate($perPage)
+            $query->orderBy('data_vencimento')->paginate($perPage)->additional(['totais' => $totais])
         );
     }
 

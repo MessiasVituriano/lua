@@ -28,7 +28,10 @@
       "Bash(bash -n docker/entrypoint.sh)",
       "Bash(docker compose *)",
       "Bash(xargs ls *)",
-      "Bash(php artisan *)"
+      "Bash(php artisan *)",
+      "Bash(php -l app/Http/Controllers/Api/CaixaController.php)",
+      "Bash(php -l app/Http/Controllers/Api/PagamentoController.php)",
+      "Bash(php -l app/Http/Controllers/Api/DashboardController.php)"
     ]
   }
 }
