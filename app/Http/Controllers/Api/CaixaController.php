@@ -259,9 +259,10 @@ class CaixaController extends Controller
             'count' => (clone $base)->count(),
         ];
 
-        return response()->json(
-            $query->paginate(15)->additional(['totais' => $totais])
-        );
+        $paginated = $query->paginate(15)->toArray();
+        $paginated['totais'] = $totais;
+
+        return response()->json($paginated);
     }
 
     public function show(CaixaDiario $caixa)

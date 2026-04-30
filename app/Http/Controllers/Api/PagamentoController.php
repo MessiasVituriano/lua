@@ -56,9 +56,10 @@ class PagamentoController extends Controller
             'count' => (clone $base)->count(),
         ];
 
-        return response()->json(
-            $query->orderBy('data_vencimento')->paginate($perPage)->additional(['totais' => $totais])
-        );
+        $paginated = $query->orderBy('data_vencimento')->paginate($perPage)->toArray();
+        $paginated['totais'] = $totais;
+
+        return response()->json($paginated);
     }
 
     public function store(PagamentoRequest $request)
