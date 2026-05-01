@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+cd /var/www
+
+# Se um comando foi passado ao container, executa e encerra.
+if [ "$#" -gt 0 ]; then
+    exec "$@"
+fi
+
 # Corrigir permissoes do storage (volume montado pode vir como root)
 chown -R laravel:www-data storage bootstrap/cache 2>/dev/null || true
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true

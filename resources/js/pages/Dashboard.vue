@@ -281,7 +281,7 @@
                                     <td class="fw-medium">{{ p.descricao }}</td>
                                     <td>{{ fmtDate(p.data_vencimento) }}</td>
                                     <td class="num-tabular">R$ {{ fmt(p.valor_total) }}</td>
-                                    <td><span class="badge" :class="p.status === 'atrasado' ? 'bg-danger' : 'bg-warning'">{{ p.status }}</span></td>
+                                    <td><span class="badge" :class="pagamentoStatusBadge(p)">{{ pagamentoStatusLabel(p) }}</span></td>
                                 </tr>
                                 <tr v-if="!d.pagamentos_proximos.length"><td colspan="4" class="empty-row">Nenhum pagamento pendente.</td></tr>
                             </tbody>
@@ -485,6 +485,24 @@ function fmtDate(dt) {
     if (!dt) return '-';
     const s = typeof dt === 'string' ? dt.slice(0, 10) : dt;
     return new Date(s + 'T12:00:00').toLocaleDateString('pt-BR');
+}
+
+function pagamentoAtrasado(p) {
+    if (p.status === 'atrasado') return true;
+    if (p.status !== 'pendente') return false;
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const vencimento = new Date(p.data_vencimento + 'T12:00:00');
+    return vencimento < hoje;
+}
+
+function pagamentoStatusBadge(p) {
+    return pagamentoAtrasado(p) ? 'bg-danger' : 'bg-warning text-dark';
+}
+
+function pagamentoStatusLabel(p) {
+    return pagamentoAtrasado(p) ? 'Atrasado' : 'No dia';
 }
 
 function varPercent(atual, anterior) {

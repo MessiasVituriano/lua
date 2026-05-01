@@ -109,7 +109,7 @@
                             <td>R$ {{ fmt(p.valor_total) }}</td>
                             <td class="d-none d-md-table-cell">R$ {{ fmt(p.valor_pago) }}</td>
                             <td>
-                                <span class="badge" :class="statusClass(p.status)">{{ statusLabel(p.status) }}</span>
+                                <span class="badge" :class="statusClass(p)">{{ statusLabel(p) }}</span>
                             </td>
                             <td>
                                 <button v-if="p.status !== 'pago'" class="btn btn-sm btn-outline-success me-1" @click="abrirPagar(p)" title="Registrar Pagamento">
@@ -229,12 +229,28 @@ function rowClass(p) {
     return '';
 }
 
-function statusClass(s) {
-    return { pendente: 'bg-info', pago: 'bg-success', atrasado: 'bg-danger', parcial: 'bg-warning text-dark' }[s];
+function isAtrasado(p) {
+    if (p.status === 'atrasado') return true;
+    if (p.status !== 'pendente') return false;
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const vencimento = new Date(p.data_vencimento + 'T12:00:00');
+    return vencimento < hoje;
 }
 
-function statusLabel(s) {
-    return { pendente: 'Pendente', pago: 'Pago', atrasado: 'Atrasado', parcial: 'Parcial' }[s];
+function statusClass(p) {
+    if (isAtrasado(p)) return 'bg-danger';
+    if (p.status === 'pendente') return 'bg-warning text-dark';
+    if (p.status === 'pago') return 'bg-success';
+    if (p.status === 'parcial') return 'bg-info';
+    return 'bg-secondary';
+}
+
+function statusLabel(p) {
+    if (isAtrasado(p)) return 'Atrasado';
+    if (p.status === 'pendente') return 'No dia';
+    return { pago: 'Pago', parcial: 'Parcial' }[p.status] || 'Pendente';
 }
 
 function abrirPagar(p) {
