@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\BancoController;
+use App\Http\Controllers\Api\AlertasMetricasController;
 use App\Http\Controllers\Api\BandeiraController;
 use App\Http\Controllers\Api\CaixaController;
+use App\Http\Controllers\Api\ClientePetController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\FornecedorController;
 use App\Http\Controllers\Api\LojaController;
@@ -25,13 +27,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('caixa/hoje', [CaixaController::class, 'hoje']);
     Route::post('caixa/abrir', [CaixaController::class, 'abrir']);
     Route::get('caixa/historico', [CaixaController::class, 'historico']);
+    Route::get('caixa/clientes-com-pets', [CaixaController::class, 'clientesComPets']);
+    Route::post('caixa/clientes-com-pets', [CaixaController::class, 'criarClienteComPet']);
     Route::get('caixa/{caixa}', [CaixaController::class, 'show'])->where('caixa', '[0-9]+');
     Route::post('caixa/{caixa}/entrada', [CaixaController::class, 'adicionarEntrada']);
     Route::delete('caixa/{caixa}/entrada/{entrada}', [CaixaController::class, 'removerEntrada']);
+    Route::get('caixa/produtos-racao-favoritos', [CaixaController::class, 'produtosRacaoFavoritos']);
     Route::post('caixa/{caixa}/fechar', [CaixaController::class, 'fechar']);
     Route::post('caixa/{caixa}/autorizar', [CaixaController::class, 'autorizar']);
     Route::post('caixa/{caixa}/reabrir', [CaixaController::class, 'reabrir']);
     Route::get('caixa-pendentes', [CaixaController::class, 'pendentes']);
+    Route::get('alertas-metricas', [AlertasMetricasController::class, 'index']);
+    Route::get('clientes-pets/clientes-list', [ClientePetController::class, 'clientesList']);
+    Route::apiResource('clientes-pets', ClientePetController::class)->parameters([
+        'clientes-pets' => 'pet',
+    ]);
 
     // Produtos (operacional: CRUD + estoque)
     Route::apiResource('produtos', ProdutoController::class);

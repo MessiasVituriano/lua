@@ -57,4 +57,9 @@ class Produto extends Model
     {
         return $this->hasMany(MovimentacaoEstoque::class);
     }
+
+    public function itensCaixa()
+    {
+        return $this->hasMany(EntradaCaixaItem::class);
+    }
 }

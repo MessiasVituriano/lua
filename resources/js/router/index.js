@@ -32,6 +32,9 @@ import MovimentacoesForm from '../pages/movimentacoes/Form.vue';
 import ProdutosIndex from '../pages/produtos/Index.vue';
 import ProdutosForm from '../pages/produtos/Form.vue';
 import ProdutosShow from '../pages/produtos/Show.vue';
+import AlertasMetricasIndex from '../pages/alertas-metricas/Index.vue';
+import ClientesPetsIndex from '../pages/clientes-pets/Index.vue';
+import ClientesPetsForm from '../pages/clientes-pets/Form.vue';
 
 const routes = [
     {
@@ -72,6 +75,10 @@ const routes = [
             { path: 'fornecedores/criar', name: 'fornecedores.create', component: FornecedoresForm },
             { path: 'fornecedores/:id', name: 'fornecedores.show', component: FornecedoresShow },
             { path: 'fornecedores/:id/editar', name: 'fornecedores.edit', component: FornecedoresForm },
+            // Clientes & Pets
+            { path: 'clientes-pets', name: 'clientes-pets.index', component: ClientesPetsIndex },
+            { path: 'clientes-pets/criar', name: 'clientes-pets.create', component: ClientesPetsForm },
+            { path: 'clientes-pets/:id/editar', name: 'clientes-pets.edit', component: ClientesPetsForm },
             // Usuarios
             { path: 'usuarios', name: 'usuarios.index', component: UsuariosIndex },
             { path: 'usuarios/criar', name: 'usuarios.create', component: UsuariosForm },
@@ -80,6 +87,7 @@ const routes = [
             { path: 'caixa', name: 'caixa.hoje', component: CaixaHoje },
             { path: 'caixa/historico', name: 'caixa.historico', component: CaixaHistorico },
             { path: 'caixa/:id', name: 'caixa.show', component: CaixaShow },
+            { path: 'alertas-metricas', name: 'alertas-metricas.index', component: AlertasMetricasIndex },
             // Movimentacoes Internas
             { path: 'movimentacoes', name: 'movimentacoes.index', component: MovimentacoesIndex },
             { path: 'movimentacoes/criar', name: 'movimentacoes.create', component: MovimentacoesForm },

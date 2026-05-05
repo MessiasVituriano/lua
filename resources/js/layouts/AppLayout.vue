@@ -45,6 +45,10 @@
                 <Truck :size="16" class="nav-icon" />
                 <span>Fornecedores</span>
             </router-link>
+            <router-link class="nav-item" active-class="active" :to="{ name: 'clientes-pets.index' }" @click="closeMobile">
+                <Users :size="16" class="nav-icon" />
+                <span>Clientes & Pets</span>
+            </router-link>
 
             <div class="nav-section">Financeiro</div>
 
@@ -56,6 +60,10 @@
                 <ArrowLeftRight :size="16" class="nav-icon" />
                 <span>Movimentações</span>
                 <span v-if="isAdmin && movPendentesCount > 0" class="nav-badge warning">{{ movPendentesCount }}</span>
+            </router-link>
+            <router-link class="nav-item" active-class="active" :to="{ name: 'alertas-metricas.index' }" @click="closeMobile">
+                <AlertTriangle :size="16" class="nav-icon" />
+                <span>Alertas e Métricas</span>
             </router-link>
             <template v-if="isAdmin">
                 <router-link class="nav-item" active-class="active" :to="{ name: 'caixa.historico' }" @click="closeMobile">
@@ -203,8 +211,10 @@ const titles = {
     'bandeiras.index': 'Bandeiras', 'bandeiras.create': 'Nova Bandeira', 'bandeiras.edit': 'Editar Bandeira',
     'planos-maquininha.index': 'Planos de Maquininha', 'planos-maquininha.create': 'Novo Plano', 'planos-maquininha.edit': 'Editar Plano',
     'fornecedores.index': 'Fornecedores', 'fornecedores.create': 'Novo Fornecedor', 'fornecedores.show': 'Detalhes do Fornecedor', 'fornecedores.edit': 'Editar Fornecedor',
+    'clientes-pets.index': 'Clientes & Pets', 'clientes-pets.create': 'Novo Cliente/Pet', 'clientes-pets.edit': 'Editar Cliente/Pet',
     'usuarios.index': 'Usuários', 'usuarios.create': 'Novo Usuário', 'usuarios.edit': 'Editar Usuário',
     'caixa.hoje': 'Caixa do Dia', 'caixa.historico': 'Histórico de Caixa', 'caixa.show': 'Detalhes do Caixa',
+    'alertas-metricas.index': 'Alertas e Métricas',
     'movimentacoes.index': 'Movimentações Internas', 'movimentacoes.create': 'Nova Movimentação', 'movimentacoes.edit': 'Editar Movimentação',
     'pagamentos.index': 'Pagamentos', 'pagamentos.calendario': 'Calendário de Pagamentos', 'pagamentos.create': 'Novo Pagamento', 'pagamentos.edit': 'Editar Pagamento',
     'produtos.index': 'Produtos', 'produtos.create': 'Novo Produto', 'produtos.edit': 'Editar Produto', 'produtos.show': 'Detalhes do Produto',

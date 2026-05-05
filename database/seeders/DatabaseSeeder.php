@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Administrador',
             'email' => 'admin@lua.com',
             'password' => 'password',
+            'role' => 'admin',
             'loja_id' => $loja->id,
             'ativo' => true,
         ]);
@@ -48,5 +49,10 @@ class DatabaseSeeder extends Seeder
         foreach ($fornecedores as $f) {
             Fornecedor::create($f);
         }
+
+        $this->call([
+            UsuariosIniciaisSeeder::class,
+            DemoVendasPorAnimalSeeder::class,
+        ]);
     }
 }

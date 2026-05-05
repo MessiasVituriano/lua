@@ -135,6 +135,14 @@ class DashboardController extends Controller
             ->groupBy('forma_recebimento')
             ->pluck('total', 'forma_recebimento');
 
+        // ── Saidas por forma de pagamento ──
+        $saidasPorForma = Pagamento::where('loja_id', $lojaId)
+            ->whereIn('status', ['pago', 'parcial'])
+            ->whereBetween('data_pagamento', [$inicio, $fim])
+            ->selectRaw('forma_pagamento, SUM(valor_pago) as total')
+            ->groupBy('forma_pagamento')
+            ->pluck('total', 'forma_pagamento');
+
         // ── Saidas por categoria ──
         $saidasPorCategoria = Pagamento::where('loja_id', $lojaId)
             ->whereIn('status', ['pago', 'parcial'])
@@ -221,6 +229,7 @@ class DashboardController extends Controller
             // Graficos
             'grafico' => $grafico,
             'entradas_por_forma' => $entradasPorForma,
+            'saidas_por_forma' => $saidasPorForma,
             'saidas_por_categoria' => $saidasPorCategoria,
 
             // Tabelas

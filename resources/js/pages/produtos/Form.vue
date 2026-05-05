@@ -4,12 +4,13 @@
             <div class="card p-4">
                 <form @submit.prevent="save">
                     <div class="row g-3">
-                        <div class="col-md-8">
+                        <!-- Linha 1: Nome | Categoria | Fornecedor -->
+                        <div class="col-md-5">
                             <label class="form-label">Nome *</label>
                             <input type="text" class="form-control" :class="{ 'is-invalid': errors.nome }" v-model="form.nome" required>
                             <div v-if="errors.nome" class="invalid-feedback">{{ errors.nome }}</div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label">Categoria *</label>
                             <select class="form-select" v-model="form.categoria" required>
                                 <option value="">Selecione...</option>
@@ -23,17 +24,23 @@
                                 <option v-for="f in fornecedores" :key="f.id" :value="f.id">{{ f.nome }}</option>
                             </select>
                         </div>
+
+                        <!-- Linha 2: Valor Custo | Margem | Valor Venda | Estoque Mínimo -->
                         <div class="col-md-3">
                             <label class="form-label">Valor Custo *</label>
                             <input type="number" step="0.01" min="0.01" class="form-control" v-model="form.valor_custo" required @input="calcularVenda">
                         </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Margem % *</label>
+                        <div class="col-md-3">
+                            <label class="form-label">Margem %
+                                <span class="text-muted" style="font-size:0.75rem">(calculada)</span>
+                            </label>
                             <input type="number" step="0.01" min="0" class="form-control" v-model="form.margem" required @input="calcularVenda">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Valor Venda</label>
-                            <input type="text" class="form-control bg-light" :value="'R$ ' + fmtValorVenda" readonly>
+                            <label class="form-label">Valor Venda *
+                                <span class="text-muted" style="font-size:0.75rem">(ou informe aqui)</span>
+                            </label>
+                            <input type="number" step="0.01" min="0" class="form-control" v-model="valorVendaCalc" @input="calcularMargem">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Estoque Minimo</label>
@@ -81,12 +88,19 @@ const form = reactive({
 });
 
 const valorVendaCalc = ref(0);
-const fmtValorVenda = computed(() => valorVendaCalc.value.toFixed(2).replace('.', ','));
 
 function calcularVenda() {
     const custo = parseFloat(form.valor_custo) || 0;
     const margem = parseFloat(form.margem) || 0;
     valorVendaCalc.value = Math.round(custo * (1 + margem / 100) * 100) / 100;
+}
+
+function calcularMargem() {
+    const custo = parseFloat(form.valor_custo) || 0;
+    const venda = parseFloat(valorVendaCalc.value) || 0;
+    if (custo > 0 && venda > 0) {
+        form.margem = Math.round(((venda / custo) - 1) * 100 * 100) / 100;
+    }
 }
 
 onMounted(async () => {

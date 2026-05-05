@@ -66,67 +66,262 @@
                 <h6 class="mb-3">Adicionar Entrada</h6>
                 <form @submit.prevent="adicionarEntrada">
                     <div class="row g-3 align-items-end">
-                        <div class="col-6 col-md-3">
+                        <div class="col-12 col-md-2">
                             <label class="form-label small">Forma *</label>
                             <select class="form-select" v-model="form.forma_recebimento" required @change="onFormaChange">
                                 <option value="">Selecione...</option>
                                 <option v-for="(label, key) in formas" :key="key" :value="key">{{ label }}</option>
                             </select>
                         </div>
-                        <div class="col-6 col-md-2">
+                        <div class="col-12 col-md-2">
                             <label class="form-label small">Banco</label>
                             <select class="form-select" v-model="form.banco_id" :disabled="form.forma_recebimento === 'dinheiro' || !form.forma_recebimento">
                                 <option :value="null">-</option>
                                 <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nome }}</option>
                             </select>
                         </div>
-                        <div class="col-6 col-md-2">
-                            <label class="form-label small">{{ ehCartao ? 'Valor bruto *' : 'Valor *' }}</label>
-                            <input type="number" step="0.01" min="0.01" class="form-control" v-model="form.valor" required ref="valorInput">
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <label class="form-label small">Descricao</label>
-                            <input type="text" class="form-control" v-model="form.descricao" placeholder="Opcional">
-                        </div>
                         <div class="col-12 col-md-2">
-                            <button type="submit" class="btn btn-lua w-100" :disabled="saving">
-                                <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>
-                                <i v-else class="bi bi-plus-lg"></i> Adicionar
-                            </button>
+                            <label class="form-label small">
+                                {{ ehCartao ? 'Valor bruto *' : 'Valor *' }}
+                                <span v-if="form.itens.length" class="text-muted" style="font-size:0.7rem"> (auto)</span>
+                            </label>
+                            <input type="number" step="0.01" min="0.01" class="form-control" v-model="form.valor" :required="!form.itens.length" :readonly="form.itens.length > 0" ref="valorInput">
                         </div>
-                    </div>
-
-                    <!-- Campos especificos de cartao -->
-                    <div v-if="ehCartao" class="row g-3 align-items-end mt-1">
-                        <div class="col-6 col-md-3">
+                        <div v-if="ehCartao" class="col-12 col-md-2">
                             <label class="form-label small">Bandeira *</label>
                             <select class="form-select" v-model="form.bandeira_id" required>
                                 <option :value="null">Selecione...</option>
                                 <option v-for="b in bandeirasDisponiveis" :key="b.id" :value="b.id">{{ b.nome }}</option>
                             </select>
                         </div>
-                        <div v-if="form.forma_recebimento === 'cartao_credito'" class="col-6 col-md-2">
+                        <div v-if="form.forma_recebimento === 'cartao_credito'" class="col-12 col-md-1">
                             <label class="form-label small">Parcelas *</label>
                             <select class="form-select" v-model.number="form.parcelas" required>
                                 <option v-for="n in 12" :key="n" :value="n">{{ n }}x</option>
                             </select>
                         </div>
-                        <div class="col-md-7">
-                            <div v-if="!planoAtivo" class="alert alert-warning py-2 mb-0 small">
-                                Nenhum plano de maquininha ativo. <router-link :to="{ name: 'planos-maquininha.create' }">Cadastrar plano</router-link>.
-                            </div>
-                            <div v-else-if="previewCalc" class="alert py-2 mb-0 small" :class="previewCalc.erro ? 'alert-danger' : 'alert-info'">
-                                <div v-if="previewCalc.erro">{{ previewCalc.erro }}</div>
-                                <div v-else>
-                                    Taxa aplicada: <strong>{{ fmtPct(previewCalc.taxa_total) }}</strong>
-                                    <span v-if="previewCalc.com_antecipacao" class="text-muted">
-                                        (taxa {{ fmtPct(previewCalc.taxa) }} + antecipacao {{ fmtPct(previewCalc.taxa_antecipacao) }})
-                                    </span>
-                                    — Valor liquido: <strong>R$ {{ fmt(previewCalc.valor_liquido) }}</strong>
-                                </div>
+                        <div class="col-12 col-md">
+                            <label class="form-label small">Descricao</label>
+                            <input type="text" class="form-control" v-model="form.descricao" placeholder="Opcional">
+                        </div>
+                    </div>
+                    <div v-if="ehCartao" class="mt-2">
+                        <div v-if="!planoAtivo" class="alert alert-warning py-2 mb-0 small">
+                            Nenhum plano de maquininha ativo. <router-link :to="{ name: 'planos-maquininha.create' }">Cadastrar plano</router-link>.
+                        </div>
+                        <div v-else-if="previewCalc" class="alert py-2 mb-0 small" :class="previewCalc.erro ? 'alert-danger' : 'alert-info'">
+                            <div v-if="previewCalc.erro">{{ previewCalc.erro }}</div>
+                            <div v-else>
+                                Taxa aplicada: <strong>{{ fmtPct(previewCalc.taxa_total) }}</strong>
+                                <span v-if="previewCalc.com_antecipacao" class="text-muted">
+                                    (taxa {{ fmtPct(previewCalc.taxa) }} + antecipacao {{ fmtPct(previewCalc.taxa_antecipacao) }})
+                                </span>
+                                — Valor liquido: <strong>R$ {{ fmt(previewCalc.valor_liquido) }}</strong>
                             </div>
                         </div>
                     </div>
+
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                            <label class="form-label small mb-0">Itens (opcional)</label>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button type="button" class="btn btn-sm btn-outline-primary" @click="mostrarNovoClientePet = !mostrarNovoClientePet">
+                                    <i class="bi bi-person-plus"></i> Novo cliente/pet
+                                </button>
+                            </div>
+                        </div>
+
+                        <div v-if="mostrarNovoClientePet" class="border rounded p-2 mb-2 bg-light-subtle">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label small">Cliente *</label>
+                                    <input type="text" class="form-control form-control-sm" v-model="novoClientePet.nome" placeholder="Nome do cliente">
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label small">Telefone</label>
+                                    <input type="text" class="form-control form-control-sm" v-model="novoClientePet.telefone" placeholder="(11) 99999-9999">
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label small">Pet *</label>
+                                    <input type="text" class="form-control form-control-sm" v-model="novoClientePet.pet_nome" placeholder="Nome do pet">
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label small">Tipo</label>
+                                    <select class="form-select form-select-sm" v-model="novoClientePet.pet_tipo">
+                                        <option :value="null">-</option>
+                                        <option v-for="(label, key) in tiposPetCadastro" :key="key" :value="key">{{ label }}</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label small">Porte</label>
+                                    <select class="form-select form-select-sm" v-model="novoClientePet.pet_porte">
+                                        <option :value="null">-</option>
+                                        <option value="pequeno">Pequeno</option>
+                                        <option value="medio">Médio</option>
+                                        <option value="grande">Grande</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label small">Raça</label>
+                                    <input type="text" class="form-control form-control-sm" v-model="novoClientePet.pet_raca" placeholder="Ex: Labrador">
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label small">Idade (meses)</label>
+                                    <input type="number" min="0" max="400" class="form-control form-control-sm" v-model.number="novoClientePet.pet_idade_meses" placeholder="Ex: 24">
+                                </div>
+                                <div class="col-6 col-md-1">
+                                    <button type="button" class="btn btn-sm btn-success w-100" :disabled="salvandoNovoClientePet" @click="criarClientePetRapido">
+                                        <span v-if="salvandoNovoClientePet" class="spinner-border spinner-border-sm"></span>
+                                        <i v-else class="bi bi-check-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small">Cliente (nome + telefone)</label>
+                                <div class="position-relative">
+                                    <input
+                                        type="text"
+                                        class="form-control form-control-sm"
+                                        v-model="clienteBusca"
+                                        placeholder="Digite nome ou telefone"
+                                        @focus="abrirAutocompleteCliente"
+                                        @blur="fecharAutocompleteCliente"
+                                        @input="onClienteBuscaInput"
+                                        @keydown.enter.prevent="selecionarPrimeiroClienteFiltrado"
+                                    >
+                                    <div v-if="autocompleteClienteAberto" class="list-group autocomplete-clientes shadow-sm">
+                                        <button
+                                            v-for="c in clientesFiltrados"
+                                            :key="c.id"
+                                            type="button"
+                                            class="list-group-item list-group-item-action py-1"
+                                            @mousedown.prevent="selecionarCliente(c)"
+                                        >
+                                            <div class="small fw-semibold">{{ c.nome }}</div>
+                                            <div class="small text-muted">{{ c.telefone || 'Sem telefone' }}</div>
+                                        </button>
+                                        <div v-if="!clientesFiltrados.length" class="list-group-item small text-muted py-1">
+                                            Nenhum cliente encontrado
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small">Pet</label>
+                                <select class="form-select form-select-sm" v-model.number="petSelecionadoId" @change="onPetSelecionadoChange" :disabled="!petsClienteSelecionado.length">
+                                    <option :value="null">Selecione...</option>
+                                    <option v-for="pet in petsClienteSelecionado" :key="pet.id" :value="pet.id">
+                                        {{ pet.nome }}{{ pet.tipo ? ' - ' + (perfisPet[pet.tipo] || pet.tipo) : '' }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div v-if="produtosMaisVendidosTop.length" class="mb-2">
+                            <small class="text-muted d-block mb-1">Mais vendidos</small>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button
+                                    v-for="p in produtosMaisVendidosTop"
+                                    :key="p.id"
+                                    type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    @click="adicionarItemRapidoRacao(p)"
+                                >
+                                    {{ p.nome }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary w-100" @click="adicionarItem()">
+                                <i class="bi bi-plus-circle"></i> + Adicionar item
+                            </button>
+                        </div>
+
+                        <div v-if="form.itens.length" class="mt-2">
+                            <div v-for="(item, idx) in form.itens" :key="idx" class="border rounded p-2 mb-2 position-relative">
+                                <button type="button" class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-1" @click="removerItem(idx)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <label class="form-label small mb-1">Produto</label>
+                                        <div class="position-relative">
+                                            <input
+                                                type="text"
+                                                class="form-control form-control-sm"
+                                                v-model="item._busca"
+                                                placeholder="Buscar produto..."
+                                                @focus="abrirAutocompleteProduto(item)"
+                                                @blur="fecharAutocompleteProduto(item)"
+                                                @input="onItemProdutoBuscaInput(item)"
+                                                @keydown.enter.prevent="selecionarPrimeiroProdutoFiltrado(item)"
+                                                autocomplete="off"
+                                            >
+                                            <div v-if="item._aberto" class="list-group autocomplete-produtos shadow-sm">
+                                                <button
+                                                    v-for="p in produtosFiltradosPorItem(item._busca)"
+                                                    :key="p.id"
+                                                    type="button"
+                                                    class="list-group-item list-group-item-action py-1"
+                                                    @mousedown.prevent="selecionarProduto(item, p)"
+                                                >
+                                                    <div class="small fw-semibold">{{ p.nome }}</div>
+                                                    <div class="small text-muted">R$ {{ fmt(p.valor_venda) }}{{ p.total_vendas ? ' · ' + p.total_vendas + 'x vendido' : '' }}</div>
+                                                </button>
+                                                <div v-if="!produtosFiltradosPorItem(item._busca).length" class="list-group-item small text-muted py-1">
+                                                    Nenhum produto encontrado
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label small mb-1">Qtd</label>
+                                        <input type="number" step="0.001" min="0.001" class="form-control form-control-sm" v-model.number="item.quantidade" @input="recalcularSubtotal(item)">
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label small mb-1">Preco Unit.</label>
+                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" v-model.number="item.preco_unitario" @input="recalcularSubtotal(item)">
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label small mb-1">Peso (g)</label>
+                                        <input type="number" min="1" class="form-control form-control-sm" v-model.number="item.peso_gramas" @input="recalcularSubtotal(item)">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small mb-1">Perfil (auto)</label>
+                                        <select class="form-select form-select-sm" v-model="item.perfil_pet_tipo" disabled>
+                                            <option :value="null">-</option>
+                                            <option v-for="(label, key) in perfisPet" :key="key" :value="key">{{ label }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small mb-1">Pet</label>
+                                        <select class="form-select form-select-sm" v-model.number="item.pet_id" @change="onItemPetChange(item)">
+                                            <option :value="null">-</option>
+                                            <option v-for="pet in petsClienteSelecionado" :key="pet.id" :value="pet.id">{{ pet.nome }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12 text-end">
+                                        <span class="small fw-semibold">Subtotal: R$ {{ fmt(item.subtotal || 0) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-end mt-1">
+                                <span class="badge bg-light text-dark">Total itens: R$ {{ fmt(totalItens) }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-lua w-100" :disabled="saving">
+                            <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>
+                            <i v-else class="bi bi-plus-lg"></i> Adicionar
+                        </button>
+                    </div>
+
                 </form>
             </div>
 
@@ -194,7 +389,18 @@
                                         bruto R$ {{ fmt(e.valor_bruto) }}
                                     </div>
                                 </td>
-                                <td>{{ e.descricao || '-' }}</td>
+                                <td>
+                                    <div>{{ e.descricao || '-' }}</div>
+                                    <div v-if="e.itens && e.itens.length" class="small text-muted mt-1">
+                                        <span v-for="(it, i) in e.itens" :key="it.id || i" class="me-2">
+                                            {{ it.produto?.nome || 'Item rapido' }}
+                                            <span v-if="it.peso_gramas">({{ it.peso_gramas }}g)</span>
+                                            <span v-if="it.pet"> · {{ it.pet.nome }}</span>
+                                            <span v-if="it.pet?.cliente"> ({{ it.pet.cliente.nome }})</span>
+                                            <span v-else-if="it.cliente"> ({{ it.cliente.nome }})</span>
+                                        </span>
+                                    </div>
+                                </td>
                                 <td v-if="caixa.status === 'aberto'">
                                     <button class="btn btn-sm btn-outline-danger" @click="removerEntrada(e)" :disabled="e._removing">
                                         <i class="bi" :class="e._removing ? 'spinner-border spinner-border-sm' : 'bi-x'"></i>
@@ -217,7 +423,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from '../../stores/auth';
 import { swalSuccess, swalError, swalWarning, swalInfo, swalConfirmDanger, swalConfirmSuccess, swalConfirmInfo } from '../../utils/swal';
@@ -234,6 +440,18 @@ const lastSync = ref('');
 let pollTimer = null;
 
 const formas = { dinheiro: 'Dinheiro', pix: 'PIX', cartao_debito: 'Cartao Debito', cartao_credito: 'Cartao Credito' };
+const perfisPet = {
+    cao_pequeno: 'Cao Pequeno',
+    cao_medio: 'Cao Medio',
+    cao_grande: 'Cao Grande',
+    gato: 'Gato',
+    outros: 'Outros',
+};
+const tiposPetCadastro = {
+    cao: 'Cão',
+    gato: 'Gato',
+    outros: 'Outros',
+};
 const dataHoje = new Date().toLocaleDateString('pt-BR');
 const form = reactive({
     forma_recebimento: '',
@@ -242,6 +460,25 @@ const form = reactive({
     descricao: '',
     bandeira_id: null,
     parcelas: 1,
+    itens: [],
+});
+const produtosRacaoFavoritos = ref([]);
+const produtosMaisVendidosTop = computed(() => produtosRacaoFavoritos.value.slice(0, 10));
+const clientesComPets = ref([]);
+const clienteSelecionadoId = ref(null);
+const petSelecionadoId = ref(null);
+const clienteBusca = ref('');
+const autocompleteClienteAberto = ref(false);
+const mostrarNovoClientePet = ref(false);
+const salvandoNovoClientePet = ref(false);
+const novoClientePet = reactive({
+    nome: '',
+    telefone: '',
+    pet_nome: '',
+    pet_tipo: null,
+    pet_porte: null,
+    pet_raca: '',
+    pet_idade_meses: null,
 });
 
 const planoAtivo = ref(null); // { plano, bandeiras: [{ id, nome, taxas: { debito, credito_avista, ... } }] }
@@ -306,6 +543,345 @@ const totaisFormaCalc = computed(() => {
 const entradasOrdenadas = computed(() => [...entradas.value].sort((a, b) => {
     return new Date(b.created_at) - new Date(a.created_at);
 }));
+const totalItens = computed(() => {
+    return form.itens.reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
+});
+const clienteSelecionado = computed(() => {
+    return clientesComPets.value.find(c => Number(c.id) === Number(clienteSelecionadoId.value)) || null;
+});
+const petsClienteSelecionado = computed(() => {
+    return clienteSelecionado.value?.pets || [];
+});
+const clientesFiltrados = computed(() => {
+    const termo = String(clienteBusca.value || '').trim().toLowerCase();
+    if (!termo) return clientesComPets.value.slice(0, 8);
+
+    return clientesComPets.value
+        .filter(c => {
+            const nome = String(c.nome || '').toLowerCase();
+            const tel = String(c.telefone || '').toLowerCase();
+            return nome.includes(termo) || tel.includes(termo);
+        })
+        .slice(0, 8);
+});
+
+function formatarClienteLabel(cliente) {
+    if (!cliente) return '';
+    return cliente.telefone ? `${cliente.nome} - ${cliente.telefone}` : cliente.nome;
+}
+
+function petById(id) {
+    if (!id) return null;
+    return petsClienteSelecionado.value.find(p => Number(p.id) === Number(id)) || null;
+}
+
+function itemBase() {
+    const petPadrao = petById(petSelecionadoId.value) || petsClienteSelecionado.value[0] || null;
+
+    return {
+        produto_id: null,
+        _busca: '',
+        _aberto: false,
+        quantidade: 1,
+        preco_unitario: null,
+        subtotal: 0,
+        peso_gramas: null,
+        perfil_pet_tipo: resolverPerfilAutomaticoPorPet(petPadrao),
+        pet_id: petPadrao?.id || null,
+        cliente_id: clienteSelecionado.value?.id || petPadrao?.cliente_id || null,
+    };
+}
+
+// Sincroniza form.valor automaticamente com a soma dos itens
+watch(totalItens, (novo) => {
+    if (form.itens.length > 0) {
+        form.valor = novo > 0 ? novo : null;
+    }
+});
+
+function adicionarItem() {
+    form.itens.push(itemBase());
+}
+
+function removerItem(idx) {
+    form.itens.splice(idx, 1);
+}
+
+function aplicarPetPadraoNosItens() {
+    const petPadrao = petById(petSelecionadoId.value) || petsClienteSelecionado.value[0] || null;
+    form.itens.forEach(item => {
+        if (!item.cliente_id && clienteSelecionado.value?.id) {
+            item.cliente_id = clienteSelecionado.value.id;
+        }
+        if (!item.pet_id) {
+            item.pet_id = petPadrao?.id || null;
+        }
+        if (!item.perfil_pet_tipo || item.perfil_pet_tipo === 'outros') {
+            item.perfil_pet_tipo = resolverPerfilAutomaticoPorPet(petPadrao);
+        }
+    });
+}
+
+function onClienteChange() {
+    clienteBusca.value = formatarClienteLabel(clienteSelecionado.value);
+    const primeiroPet = petsClienteSelecionado.value[0] || null;
+    petSelecionadoId.value = primeiroPet?.id || null;
+    onPetSelecionadoChange();
+    aplicarPetPadraoNosItens();
+}
+
+function selecionarCliente(cliente) {
+    if (!cliente) return;
+    clienteSelecionadoId.value = Number(cliente.id);
+    onClienteChange();
+    autocompleteClienteAberto.value = false;
+}
+
+function abrirAutocompleteCliente() {
+    if (clienteSelecionado.value) {
+        // Ao clicar novamente, abre lista completa sem perder o cliente selecionado.
+        clienteBusca.value = '';
+    }
+    autocompleteClienteAberto.value = true;
+}
+
+function fecharAutocompleteCliente() {
+    setTimeout(() => {
+        autocompleteClienteAberto.value = false;
+        if (clienteSelecionado.value) {
+            clienteBusca.value = formatarClienteLabel(clienteSelecionado.value);
+        }
+    }, 120);
+}
+
+function onClienteBuscaInput() {
+    autocompleteClienteAberto.value = true;
+    if (!clienteBusca.value) {
+        clienteSelecionadoId.value = null;
+        petSelecionadoId.value = null;
+    }
+}
+
+function selecionarPrimeiroClienteFiltrado() {
+    if (!clientesFiltrados.value.length) return;
+    selecionarCliente(clientesFiltrados.value[0]);
+}
+
+function onPetSelecionadoChange() {
+    const petSelecionado = petById(petSelecionadoId.value);
+    const tipoNormalizado = normalizarTipoPet(petSelecionado?.tipo);
+    if (tipoNormalizado) {
+        novoClientePet.pet_tipo = tipoNormalizado;
+    }
+    novoClientePet.pet_porte = normalizarPortePet(petSelecionado?.porte);
+    novoClientePet.pet_raca = petSelecionado?.raca || '';
+    novoClientePet.pet_idade_meses = Number.isFinite(Number(petSelecionado?.idade_meses))
+        ? Number(petSelecionado.idade_meses)
+        : null;
+
+    aplicarPetPadraoNosItens();
+}
+
+function normalizarTipoPet(tipo) {
+    return {
+        cao: 'cao',
+        cao_pequeno: 'cao',
+        cao_medio: 'cao',
+        cao_grande: 'cao',
+        gato: 'gato',
+        outros: 'outros',
+    }[tipo] || null;
+}
+
+function normalizarPortePet(porte) {
+    return {
+        pequeno: 'pequeno',
+        medio: 'medio',
+        grande: 'grande',
+    }[porte] || null;
+}
+
+function onItemPetChange(item) {
+    const pet = petById(item.pet_id);
+    if (pet?.cliente_id) {
+        item.cliente_id = pet.cliente_id;
+    }
+    item.perfil_pet_tipo = resolverPerfilAutomaticoPorPet(pet);
+}
+
+function resolverPerfilAutomaticoPorPet(pet) {
+    if (!pet) return null;
+
+    const tipo = normalizarTipoPet(pet.tipo);
+    if (tipo === 'gato') return 'gato';
+    if (tipo === 'outros') return 'outros';
+    if (tipo !== 'cao') return null;
+
+    const porte = normalizarPortePet(pet.porte);
+    if (porte === 'pequeno') return 'cao_pequeno';
+    if (porte === 'grande') return 'cao_grande';
+    return 'cao_medio';
+}
+
+async function criarClientePetRapido() {
+    if (!novoClientePet.nome || !novoClientePet.pet_nome) {
+        swalWarning('Informe nome do cliente e nome do pet.');
+        return;
+    }
+
+    salvandoNovoClientePet.value = true;
+    try {
+        const { data } = await axios.post('/caixa/clientes-com-pets', {
+            nome: novoClientePet.nome,
+            telefone: novoClientePet.telefone || null,
+            pet_nome: novoClientePet.pet_nome,
+            pet_tipo: novoClientePet.pet_tipo || null,
+            pet_porte: novoClientePet.pet_porte || null,
+            pet_raca: novoClientePet.pet_raca || null,
+            pet_idade_meses: Number.isFinite(Number(novoClientePet.pet_idade_meses))
+                ? Number(novoClientePet.pet_idade_meses)
+                : null,
+        });
+
+        await loadClientesComPets();
+
+        const clienteCriado = clientesComPets.value.find(c => Number(c.id) === Number(data?.cliente?.id));
+        if (clienteCriado) {
+            selecionarCliente(clienteCriado);
+        }
+
+        novoClientePet.nome = '';
+        novoClientePet.telefone = '';
+        novoClientePet.pet_nome = '';
+        novoClientePet.pet_tipo = null;
+        novoClientePet.pet_porte = null;
+        novoClientePet.pet_raca = '';
+        novoClientePet.pet_idade_meses = null;
+        mostrarNovoClientePet.value = false;
+        swalSuccess('Cliente e pet criados com sucesso.');
+    } catch (e) {
+        const msg = e.response?.data?.errors
+            ? Object.values(e.response.data.errors).flat().join('. ')
+            : (e.response?.data?.message || 'Erro ao criar cliente/pet.');
+        swalError(msg);
+    } finally {
+        salvandoNovoClientePet.value = false;
+    }
+}
+
+function extrairPesoEmbalagemGramas(nomeProduto) {
+    if (!nomeProduto) return null;
+
+    // Suporta formatos: 15kg, 7,5kg, 500g
+    const matchKg = nomeProduto.match(/(\d+(?:[\.,]\d+)?)\s*kg/i);
+    if (matchKg) {
+        const kg = parseFloat(String(matchKg[1]).replace(',', '.'));
+        return Number.isFinite(kg) && kg > 0 ? Math.round(kg * 1000) : null;
+    }
+
+    const matchG = nomeProduto.match(/(\d+(?:[\.,]\d+)?)\s*g/i);
+    if (matchG) {
+        const g = parseFloat(String(matchG[1]).replace(',', '.'));
+        return Number.isFinite(g) && g > 0 ? Math.round(g) : null;
+    }
+
+    return null;
+}
+
+function onItemProdutoChange(item) {
+    const produto = produtosRacaoFavoritos.value.find(p => p.id === item.produto_id);
+    const pesoEmbalagem = extrairPesoEmbalagemGramas(produto?.nome);
+
+    if (produto && (item.preco_unitario === null || item.preco_unitario === '' || Number(item.preco_unitario) <= 0)) {
+        item.preco_unitario = parseFloat(produto.valor_venda || 0);
+    }
+
+    if (pesoEmbalagem && (!item.peso_gramas || Number(item.peso_gramas) <= 0)) {
+        item.peso_gramas = pesoEmbalagem;
+    }
+
+    recalcularSubtotal(item);
+}
+
+function recalcularSubtotal(item) {
+    const pu = parseFloat(item.preco_unitario || 0);
+    if (item.peso_gramas > 0) {
+        const produto = produtosRacaoFavoritos.value.find(p => p.id === item.produto_id);
+        const pesoEmbalagem = extrairPesoEmbalagemGramas(produto?.nome);
+
+        // preco_unitario = preco da embalagem; subtotal proporcional ao peso vendido em gramas
+        if (pesoEmbalagem && pesoEmbalagem > 0) {
+            item.subtotal = Math.round((item.peso_gramas / pesoEmbalagem) * pu * 100) / 100;
+            return;
+        }
+
+        // Fallback: se nao identificar embalagem, considera preco por kg
+        item.subtotal = Math.round((item.peso_gramas / 1000) * pu * 100) / 100;
+    } else {
+        const qtd = parseFloat(item.quantidade || 0);
+        item.subtotal = Math.round(qtd * pu * 100) / 100;
+    }
+}
+
+function adicionarItemRapidoRacao(produto) {
+    const pesoEmbalagem = extrairPesoEmbalagemGramas(produto?.nome);
+    const petPadrao = petById(petSelecionadoId.value) || petsClienteSelecionado.value[0] || null;
+    const item = {
+        ...itemBase(),
+        produto_id: produto.id,
+        _busca: produto.nome,
+        quantidade: 1,
+        preco_unitario: parseFloat(produto.valor_venda || 0),
+        peso_gramas: pesoEmbalagem || 1000,
+        perfil_pet_tipo: resolverPerfilAutomaticoPorPet(petPadrao) || 'outros',
+        pet_id: petPadrao?.id || null,
+        cliente_id: clienteSelecionado.value?.id || petPadrao?.cliente_id || null,
+    };
+    recalcularSubtotal(item);
+    form.itens.push(item);
+}
+
+function produtosFiltradosPorItem(busca) {
+    const termo = String(busca || '').trim().toLowerCase();
+    if (!termo) return produtosRacaoFavoritos.value.slice(0, 8);
+    return produtosRacaoFavoritos.value
+        .filter(p => p.nome.toLowerCase().includes(termo))
+        .slice(0, 10);
+}
+
+function abrirAutocompleteProduto(item) {
+    if (item.produto_id) item._busca = '';
+    item._aberto = true;
+}
+
+function fecharAutocompleteProduto(item) {
+    setTimeout(() => {
+        item._aberto = false;
+        if (item.produto_id) {
+            const p = produtosRacaoFavoritos.value.find(p => p.id === item.produto_id);
+            item._busca = p?.nome || '';
+        }
+    }, 120);
+}
+
+function onItemProdutoBuscaInput(item) {
+    item._aberto = true;
+    if (!item._busca) {
+        item.produto_id = null;
+    }
+}
+
+function selecionarProduto(item, produto) {
+    item.produto_id = produto.id;
+    item._busca = produto.nome;
+    item._aberto = false;
+    onItemProdutoChange(item);
+}
+
+function selecionarPrimeiroProdutoFiltrado(item) {
+    const lista = produtosFiltradosPorItem(item._busca);
+    if (lista.length) selecionarProduto(item, lista[0]);
+}
 
 function onFormaChange() {
     if (form.forma_recebimento === 'dinheiro') {
@@ -416,14 +992,23 @@ async function abrirCaixa() {
 
 // ── Adicionar entrada (otimista) ──
 async function adicionarEntrada() {
-    if (!form.forma_recebimento || !form.valor) return;
+    if (!form.forma_recebimento || (!form.valor && !form.itens.length)) return;
+    if (ehCartao.value && !form.bandeira_id) {
+        swalWarning('Selecione a bandeira do cartao.');
+        return;
+    }
+    if (form.forma_recebimento === 'cartao_credito' && !form.parcelas) {
+        swalWarning('Selecione a quantidade de parcelas.');
+        return;
+    }
     saving.value = true;
 
     // Para cartao: exibir valor liquido na entrada local (consistente com o que o backend vai salvar)
     const isCartao = ehCartao.value;
+    const valorReferencia = form.valor ? parseFloat(form.valor) : totalItens.value;
     const valorLocal = isCartao && previewCalc.value && !previewCalc.value.erro
         ? previewCalc.value.valor_liquido
-        : parseFloat(form.valor);
+        : valorReferencia;
 
     // Criar entrada temporaria local
     const tempId = 'temp_' + Date.now();
@@ -437,6 +1022,7 @@ async function adicionarEntrada() {
         taxa_aplicada: isCartao && previewCalc.value ? previewCalc.value.taxa_total : null,
         valor: valorLocal,
         descricao: form.descricao || null,
+        itens: form.itens,
         bandeira: isCartao ? planoAtivo.value?.bandeiras.find(b => b.id === form.bandeira_id) : null,
         created_at: new Date().toISOString(),
         _new: true,
@@ -449,13 +1035,26 @@ async function adicionarEntrada() {
     const payload = {
         forma_recebimento: form.forma_recebimento,
         banco_id: form.banco_id || null,
-        valor: form.valor,
+        valor: form.valor || null,
         descricao: form.descricao || null,
         bandeira_id: isCartao ? form.bandeira_id : null,
         parcelas: isCartao ? form.parcelas : null,
+        itens: form.itens.length
+            ? form.itens.map(item => ({
+                produto_id: item.produto_id || null,
+                quantidade: item.quantidade,
+                preco_unitario: item.preco_unitario || null,
+                subtotal: item.subtotal || null,
+                peso_gramas: item.peso_gramas || null,
+                perfil_pet_tipo: item.perfil_pet_tipo || null,
+                cliente_id: item.cliente_id ? Number(item.cliente_id) : (clienteSelecionado.value?.id || null),
+                pet_id: item.pet_id ? Number(item.pet_id) : null,
+            }))
+            : null,
     };
     form.valor = '';
     form.descricao = '';
+    form.itens = [];
 
     try {
         const { data: entradaReal } = await axios.post('/caixa/' + caixa.value.id + '/entrada', payload);
@@ -565,10 +1164,51 @@ async function loadPlanoAtivo() {
     }
 }
 
+async function loadProdutosRacaoFavoritos() {
+    try {
+        const { data } = await axios.get('/caixa/produtos-racao-favoritos');
+        produtosRacaoFavoritos.value = data || [];
+    } catch {
+        produtosRacaoFavoritos.value = [];
+    }
+}
+
+async function loadClientesComPets() {
+    try {
+        const { data } = await axios.get('/caixa/clientes-com-pets');
+        clientesComPets.value = data || [];
+
+        if (!clienteSelecionadoId.value && clientesComPets.value.length) {
+            clienteSelecionadoId.value = clientesComPets.value[0].id;
+        }
+
+        if (clienteSelecionadoId.value) {
+            clienteBusca.value = formatarClienteLabel(clienteSelecionado.value);
+        }
+
+        const pets = petsClienteSelecionado.value;
+        if ((!petSelecionadoId.value || !pets.find(p => Number(p.id) === Number(petSelecionadoId.value))) && pets.length) {
+            petSelecionadoId.value = pets[0].id;
+        }
+    } catch {
+        clientesComPets.value = [];
+        clienteSelecionadoId.value = null;
+        petSelecionadoId.value = null;
+    }
+}
+
 onMounted(async () => {
-    const [, bancosRes] = await Promise.all([load(), axios.get('/bancos'), loadPlanoAtivo()]);
+    const [, bancosRes] = await Promise.all([
+        load(),
+        axios.get('/bancos'),
+        loadPlanoAtivo(),
+        loadProdutosRacaoFavoritos(),
+        loadClientesComPets(),
+    ]);
     bancos.value = bancosRes.data.filter(b => b.ativo);
     bancosMap.value = Object.fromEntries(bancosRes.data.map(b => [b.id, b.nome]));
+
+    aplicarPetPadraoNosItens();
 
     // Polling ativo enquanto caixa nao estiver definitivamente fechado
     if (caixa.value && caixa.value.status !== 'fechado') {
@@ -584,4 +1224,15 @@ onUnmounted(stopPolling);
 .row-leave-active { transition: all 0.2s ease; }
 .row-enter-from { opacity: 0; transform: translateY(-10px); }
 .row-leave-to { opacity: 0; transform: translateX(20px); }
+
+.autocomplete-clientes,
+.autocomplete-produtos {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    max-height: 220px;
+    overflow-y: auto;
+}
 </style>

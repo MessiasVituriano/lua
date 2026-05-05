@@ -58,4 +58,9 @@ class EntradaCaixa extends Model
     {
         return $this->belongsTo(Bandeira::class);
     }
+
+    public function itens()
+    {
+        return $this->hasMany(EntradaCaixaItem::class);
+    }
 }

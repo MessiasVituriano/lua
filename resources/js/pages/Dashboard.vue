@@ -117,6 +117,59 @@
                 </div>
             </div>
 
+            <!-- Gráfico saldo -->
+            <div class="card section-card">
+                <div class="section-header">
+                    <div>
+                        <h3 class="section-title">Saldo por período</h3>
+                        <p class="section-subtitle">Resultado líquido (entradas menos saídas)</p>
+                    </div>
+                </div>
+                <div class="chart-wrap">
+                    <Bar v-if="barChartReady" :data="saldoChartData" :options="saldoChartOptions" />
+                </div>
+            </div>
+
+            <!-- Gráficos pizza: saldo por forma -->
+            <div class="row-split">
+                <div class="card section-card">
+                    <div class="section-header">
+                        <div>
+                            <h3 class="section-title">Entradas por forma</h3>
+                            <p class="section-subtitle">Distribuição dos recebimentos por tipo</p>
+                        </div>
+                    </div>
+                    <div class="chart-wrap small">
+                        <Doughnut v-if="barChartReady && saldoFormaLabels.length" :data="entradasFormaChartData" :options="formaFormaOptions" />
+                        <p v-else-if="barChartReady" class="empty-state">Sem dados no período.</p>
+                    </div>
+                </div>
+                <div class="card section-card">
+                    <div class="section-header">
+                        <div>
+                            <h3 class="section-title">Saídas por forma</h3>
+                            <p class="section-subtitle">Distribuição dos pagamentos por tipo</p>
+                        </div>
+                    </div>
+                    <div class="chart-wrap small">
+                        <Doughnut v-if="barChartReady && Object.keys(d.saidas_por_forma || {}).length" :data="saidasFormaChartData" :options="formaFormaOptions" />
+                        <p v-else-if="barChartReady" class="empty-state">Sem dados no período.</p>
+                    </div>
+                </div>
+                <div class="card section-card">
+                    <div class="section-header">
+                        <div>
+                            <h3 class="section-title">Saldo por forma</h3>
+                            <p class="section-subtitle">Resultado líquido por tipo (entradas menos saídas)</p>
+                        </div>
+                    </div>
+                    <div class="chart-wrap small">
+                        <Doughnut v-if="barChartReady && saldoFormaPositivo.length" :data="saldoFormaDonutData" :options="formaFormaOptions" />
+                        <p v-else-if="barChartReady" class="empty-state">Sem dados no período.</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Gráficos pizza -->
             <div class="row-split">
                 <div class="card section-card">
@@ -461,6 +514,188 @@ const categoriaChartData = computed(() => {
         datasets: [{ data: keys.map(k => d.value.saidas_por_categoria[k]), backgroundColor: catColors.slice(0, keys.length), borderWidth: 0 }],
     };
 });
+
+const saldoChartData = computed(() => {
+    if (!d.value) return { labels: [], datasets: [] };
+    const labels = d.value.grafico.labels.map(l => {
+        if (l.length === 7) {
+            const [y, m] = l.split('-');
+            return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(m)-1] + '/' + y.slice(2);
+        }
+        const dt = new Date(l + 'T12:00:00');
+        return dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    });
+    const saldos = d.value.grafico.entradas.map((e, i) => e - d.value.grafico.saidas[i]);
+    return {
+        labels,
+        datasets: [{
+            label: 'Saldo',
+            data: saldos,
+            backgroundColor: saldos.map(v => v >= 0 ? '#059669' : '#dc2626'),
+            borderRadius: 4,
+            borderSkipped: false,
+        }],
+    };
+});
+
+const formasPagamentoLabels = {
+    dinheiro: 'Dinheiro', pix: 'PIX', cartao_debito: 'Cartão Débito',
+    cartao_credito: 'Cartão Crédito', boleto: 'Boleto', transferencia: 'Transferência',
+};
+
+const allFormaColors = {
+    dinheiro: '#059669', pix: '#6e56cf', cartao_debito: '#0284c7',
+    cartao_credito: '#d97706', boleto: '#78716c', transferencia: '#0891b2',
+};
+
+const saldoFormaPositivo = computed(() => {
+    if (!d.value) return [];
+    return saldoFormaLabels.value.filter(k => {
+        const e = parseFloat(d.value.entradas_por_forma[k] || 0);
+        const s = parseFloat((d.value.saidas_por_forma || {})[k] || 0);
+        return (e - s) > 0;
+    });
+});
+
+const saldoFormaDonutData = computed(() => {
+    if (!d.value) return { labels: [], datasets: [] };
+    const keys = saldoFormaLabels.value;
+    const saldos = keys.map(k => {
+        const e = parseFloat(d.value.entradas_por_forma[k] || 0);
+        const s = parseFloat((d.value.saidas_por_forma || {})[k] || 0);
+        return Math.max(0, e - s);
+    }).filter((_, i) => keys[i]);
+    const posKeys = keys.filter((k, i) => saldos[i] > 0);
+    const posVals = saldos.filter(v => v > 0);
+    return {
+        labels: posKeys.map(k => formasPagamentoLabels[k] || k),
+        datasets: [{ data: posVals, backgroundColor: posKeys.map(k => allFormaColors[k] || '#6e56cf'), borderWidth: 0 }],
+    };
+});
+
+const saldoFormaLabels = computed(() => {
+    if (!d.value) return [];
+    const keys = new Set([
+        ...Object.keys(d.value.entradas_por_forma),
+        ...Object.keys(d.value.saidas_por_forma || {}),
+    ]);
+    return [...keys];
+});
+
+const entradasFormaChartData = computed(() => {
+    if (!d.value) return { labels: [], datasets: [] };
+    const keys = Object.keys(d.value.entradas_por_forma);
+    return {
+        labels: keys.map(k => formasPagamentoLabels[k] || k),
+        datasets: [{ data: keys.map(k => parseFloat(d.value.entradas_por_forma[k] || 0)), backgroundColor: keys.map(k => allFormaColors[k] || '#6e56cf'), borderWidth: 0 }],
+    };
+});
+
+const saidasFormaChartData = computed(() => {
+    if (!d.value) return { labels: [], datasets: [] };
+    const keys = Object.keys(d.value.saidas_por_forma || {});
+    return {
+        labels: keys.map(k => formasPagamentoLabels[k] || k),
+        datasets: [{ data: keys.map(k => parseFloat(d.value.saidas_por_forma[k] || 0)), backgroundColor: keys.map(k => allFormaColors[k] || '#6e56cf'), borderWidth: 0 }],
+    };
+});
+
+const formaFormaOptions = computed(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '65%',
+    plugins: {
+        legend: {
+            position: 'bottom',
+            labels: { color: textColor.value, usePointStyle: true, pointStyle: 'circle', padding: 12, boxWidth: 6, boxHeight: 6, font: { size: 12 } },
+        },
+        tooltip: {
+            backgroundColor: isDark.value ? '#1e1b2d' : '#1c1917',
+            padding: 10,
+            cornerRadius: 6,
+            callbacks: { label: (ctx) => ctx.label + ': R$ ' + Number(ctx.raw).toFixed(2).replace('.', ',') },
+        },
+    },
+}));
+
+const saldoCategoriaChartData = computed(() => {
+    if (!d.value) return { labels: [], datasets: [] };
+    const keys = Object.keys(d.value.saidas_por_categoria);
+    const values = keys.map(k => (float = d.value.saidas_por_categoria[k], parseFloat(float)));
+    return {
+        labels: keys.map(k => catLabels[k] || k),
+        datasets: [{
+            label: 'Saídas',
+            data: values,
+            backgroundColor: catColors.slice(0, keys.length),
+            borderRadius: 4,
+            borderSkipped: false,
+        }],
+    };
+});
+
+const saldoCategoriaChartOptions = computed(() => ({
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { display: false },
+        tooltip: {
+            backgroundColor: isDark.value ? '#1e1b2d' : '#1c1917',
+            padding: 10,
+            cornerRadius: 6,
+            boxPadding: 4,
+            titleFont: { size: 12, weight: 500 },
+            bodyFont: { size: 12 },
+            callbacks: {
+                label: (ctx) => 'R$ ' + Number(ctx.raw).toFixed(2).replace('.', ','),
+            },
+        },
+    },
+    scales: {
+        x: {
+            ticks: {
+                color: textColor.value,
+                font: { size: 11 },
+                callback: (v) => 'R$ ' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v),
+            },
+            grid: { color: gridColor.value, drawBorder: false },
+            border: { display: false },
+        },
+        y: { ticks: { color: textColor.value, font: { size: 12 } }, grid: { display: false } },
+    },
+}));
+
+const saldoChartOptions = computed(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { display: false },
+        tooltip: {
+            backgroundColor: isDark.value ? '#1e1b2d' : '#1c1917',
+            padding: 10,
+            cornerRadius: 6,
+            boxPadding: 4,
+            titleFont: { size: 12, weight: 500 },
+            bodyFont: { size: 12 },
+            callbacks: {
+                label: (ctx) => 'Saldo: R$ ' + Number(ctx.raw).toFixed(2).replace('.', ','),
+            },
+        },
+    },
+    scales: {
+        x: { ticks: { color: textColor.value, maxRotation: 0, font: { size: 11 } }, grid: { display: false } },
+        y: {
+            ticks: {
+                color: textColor.value,
+                font: { size: 11 },
+                callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v/1000).toFixed(0) + 'k' : v),
+            },
+            grid: { color: gridColor.value, drawBorder: false },
+            border: { display: false },
+        },
+    },
+}));
 
 const pieOptions = computed(() => ({
     responsive: true,
