@@ -22,6 +22,7 @@ class EntradaCaixa extends Model
         'valor_bruto',
         'com_antecipacao',
         'valor',
+        'desconto',
         'descricao',
     ];
 
@@ -29,6 +30,7 @@ class EntradaCaixa extends Model
         'valor' => 'decimal:2',
         'valor_bruto' => 'decimal:2',
         'taxa_aplicada' => 'decimal:2',
+        'desconto' => 'decimal:2',
         'com_antecipacao' => 'boolean',
     ];
 

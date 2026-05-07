@@ -87,6 +87,10 @@
                             </label>
                             <input type="number" step="0.01" min="0.01" class="form-control" v-model="form.valor" :required="!form.itens.length" :readonly="form.itens.length > 0" ref="valorInput">
                         </div>
+                        <div class="col-6 col-md-2">
+                            <label class="form-label small">Desconto</label>
+                            <input type="number" step="0.01" min="0" class="form-control" v-model.number="form.desconto" placeholder="0,00">
+                        </div>
                         <div v-if="ehCartao" class="col-12 col-md-2">
                             <label class="form-label small">Bandeira *</label>
                             <select class="form-select" v-model="form.bandeira_id" required>
@@ -287,8 +291,8 @@
                                         <input type="number" step="0.01" min="0" class="form-control form-control-sm" v-model.number="item.preco_unitario" @input="recalcularSubtotal(item)">
                                     </div>
                                     <div class="col-4">
-                                        <label class="form-label small mb-1">Peso (g)</label>
-                                        <input type="number" min="1" class="form-control form-control-sm" v-model.number="item.peso_gramas" @input="recalcularSubtotal(item)">
+                                        <label class="form-label small mb-1">Peso (kg)</label>
+                                        <input type="number" step="0.001" min="0.001" class="form-control form-control-sm" :value="pesoKgFromGramas(item.peso_gramas)" @input="onPesoKgInput(item, $event.target.value)" placeholder="Ex: 1,5">
                                     </div>
                                     <div class="col-6">
                                         <label class="form-label small mb-1">Perfil (auto)</label>
@@ -388,6 +392,9 @@
                                     <div v-if="e.valor_bruto && parseFloat(e.valor_bruto) !== parseFloat(e.valor)" class="small text-muted fw-normal">
                                         bruto R$ {{ fmt(e.valor_bruto) }}
                                     </div>
+                                    <div v-if="parseFloat(e.desconto || 0) > 0" class="small text-warning fw-normal">
+                                        desc. R$ {{ fmt(e.desconto) }}
+                                    </div>
                                 </td>
                                 <td>
                                     <div>{{ e.descricao || '-' }}</div>
@@ -457,6 +464,7 @@ const form = reactive({
     forma_recebimento: '',
     banco_id: null,
     valor: '',
+    desconto: 0,
     descricao: '',
     bandeira_id: null,
     parcelas: 1,
@@ -518,13 +526,18 @@ const previewCalc = computed(() => {
     const isCredito = form.forma_recebimento === 'cartao_credito';
     const taxaAnt = isCredito && planoAtivo.value.plano.taxa_antecipacao ? parseFloat(planoAtivo.value.plano.taxa_antecipacao) : 0;
     const taxaTotal = parseFloat(taxa) + taxaAnt;
-    const bruto = parseFloat(form.valor);
+    const desconto = parseFloat(form.desconto || 0) || 0;
+    const bruto = Math.round((parseFloat(form.valor) - desconto) * 100) / 100;
+    if (bruto <= 0) {
+        return { erro: 'Valor apos desconto deve ser maior que zero.' };
+    }
     const liquido = Math.round(bruto * (1 - taxaTotal / 100) * 100) / 100;
 
     return {
         taxa: parseFloat(taxa),
         taxa_antecipacao: taxaAnt,
         taxa_total: taxaTotal,
+        valor_bruto_pos_desconto: bruto,
         valor_liquido: liquido,
         com_antecipacao: taxaAnt > 0,
     };
@@ -803,6 +816,28 @@ function onItemProdutoChange(item) {
     recalcularSubtotal(item);
 }
 
+function pesoKgFromGramas(g) {
+    const n = Number(g);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    return Math.round((n / 1000) * 1000) / 1000;
+}
+
+function onPesoKgInput(item, raw) {
+    const norm = String(raw ?? '').replace(',', '.').trim();
+    if (norm === '') {
+        item.peso_gramas = null;
+        recalcularSubtotal(item);
+        return;
+    }
+    const kg = parseFloat(norm);
+    if (!Number.isFinite(kg) || kg <= 0) {
+        item.peso_gramas = null;
+    } else {
+        item.peso_gramas = Math.round(kg * 1000);
+    }
+    recalcularSubtotal(item);
+}
+
 function recalcularSubtotal(item) {
     const pu = parseFloat(item.preco_unitario || 0);
     if (item.peso_gramas > 0) {
@@ -1005,10 +1040,12 @@ async function adicionarEntrada() {
 
     // Para cartao: exibir valor liquido na entrada local (consistente com o que o backend vai salvar)
     const isCartao = ehCartao.value;
+    const desconto = parseFloat(form.desconto || 0) || 0;
     const valorReferencia = form.valor ? parseFloat(form.valor) : totalItens.value;
+    const valorPosDesconto = Math.round((valorReferencia - desconto) * 100) / 100;
     const valorLocal = isCartao && previewCalc.value && !previewCalc.value.erro
         ? previewCalc.value.valor_liquido
-        : valorReferencia;
+        : valorPosDesconto;
 
     // Criar entrada temporaria local
     const tempId = 'temp_' + Date.now();
@@ -1018,9 +1055,10 @@ async function adicionarEntrada() {
         banco_id: form.banco_id,
         bandeira_id: form.bandeira_id,
         parcelas: isCartao ? form.parcelas : null,
-        valor_bruto: isCartao ? parseFloat(form.valor) : null,
+        valor_bruto: isCartao ? valorPosDesconto : null,
         taxa_aplicada: isCartao && previewCalc.value ? previewCalc.value.taxa_total : null,
         valor: valorLocal,
+        desconto: desconto,
         descricao: form.descricao || null,
         itens: form.itens,
         bandeira: isCartao ? planoAtivo.value?.bandeiras.find(b => b.id === form.bandeira_id) : null,
@@ -1036,6 +1074,7 @@ async function adicionarEntrada() {
         forma_recebimento: form.forma_recebimento,
         banco_id: form.banco_id || null,
         valor: form.valor || null,
+        desconto: desconto || 0,
         descricao: form.descricao || null,
         bandeira_id: isCartao ? form.bandeira_id : null,
         parcelas: isCartao ? form.parcelas : null,
@@ -1053,6 +1092,7 @@ async function adicionarEntrada() {
             : null,
     };
     form.valor = '';
+    form.desconto = 0;
     form.descricao = '';
     form.itens = [];
 

@@ -61,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('planos-maquininha/ativo', [PlanoMaquininhaController::class, 'ativo']);
 
     // Movimentacoes Internas (CRUD para todos, aprovacao admin via middleware no controller)
+    Route::get('movimentacoes-internas-saldos', [MovimentacaoInternaController::class, 'saldos']);
     Route::apiResource('movimentacoes-internas', MovimentacaoInternaController::class);
     Route::post('movimentacoes-internas/{movimentacoes_interna}/aprovar', [MovimentacaoInternaController::class, 'aprovar']);
     Route::post('movimentacoes-internas/{movimentacoes_interna}/rejeitar', [MovimentacaoInternaController::class, 'rejeitar']);

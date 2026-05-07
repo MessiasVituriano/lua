@@ -4,8 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MovimentacaoInternaRequest;
+use App\Models\Banco;
+use App\Models\EntradaCaixa;
 use App\Models\MovimentacaoInterna;
+use App\Models\Pagamento;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MovimentacaoInternaController extends Controller
 {
@@ -146,5 +150,116 @@ class MovimentacaoInternaController extends Controller
             ->get();
 
         return response()->json($pendentes);
+    }
+
+    public function saldos()
+    {
+        $lojaId = auth()->user()->loja_id;
+
+        $bancos = Banco::orderBy('nome')->get(['id', 'nome', 'ativo']);
+
+        // Movimentacoes aprovadas: entradas e saidas por banco
+        $movEntradasPorBanco = MovimentacaoInterna::query()
+            ->where('loja_id', $lojaId)
+            ->where('status', 'aprovada')
+            ->whereIn('tipo', ['aporte', 'transferencia_banco'])
+            ->whereNotNull('banco_destino_id')
+            ->groupBy('banco_destino_id')
+            ->pluck(DB::raw('SUM(valor)'), 'banco_destino_id');
+
+        $movSaidasPorBanco = MovimentacaoInterna::query()
+            ->where('loja_id', $lojaId)
+            ->where('status', 'aprovada')
+            ->whereIn('tipo', ['sangria', 'transferencia_banco'])
+            ->whereNotNull('banco_origem_id')
+            ->groupBy('banco_origem_id')
+            ->pluck(DB::raw('SUM(valor)'), 'banco_origem_id');
+
+        // Entradas de caixa creditadas em banco (cartao, pix com banco)
+        $entradasCaixaPorBanco = EntradaCaixa::query()
+            ->whereHas('caixaDiario', fn ($q) => $q->where('loja_id', $lojaId))
+            ->whereNotNull('banco_id')
+            ->groupBy('banco_id')
+            ->pluck(DB::raw('SUM(valor)'), 'banco_id');
+
+        // Pagamentos efetuados por banco
+        $pagamentosPorBanco = Pagamento::query()
+            ->where('loja_id', $lojaId)
+            ->whereIn('status', ['pago', 'parcial'])
+            ->whereNotNull('banco_id')
+            ->groupBy('banco_id')
+            ->pluck(DB::raw('SUM(valor_pago)'), 'banco_id');
+
+        $saldosBancos = $bancos->map(function ($banco) use ($movEntradasPorBanco, $movSaidasPorBanco, $entradasCaixaPorBanco, $pagamentosPorBanco) {
+            $entradas = (float) ($movEntradasPorBanco[$banco->id] ?? 0)
+                + (float) ($entradasCaixaPorBanco[$banco->id] ?? 0);
+            $saidas = (float) ($movSaidasPorBanco[$banco->id] ?? 0)
+                + (float) ($pagamentosPorBanco[$banco->id] ?? 0);
+
+            return [
+                'id' => $banco->id,
+                'nome' => $banco->nome,
+                'ativo' => (bool) $banco->ativo,
+                'entradas' => round($entradas, 2),
+                'saidas' => round($saidas, 2),
+                'saldo' => round($entradas - $saidas, 2),
+            ];
+        });
+
+        // Caixa dinheiro fisico
+        $entradasDinheiro = (float) EntradaCaixa::query()
+            ->whereHas('caixaDiario', fn ($q) => $q->where('loja_id', $lojaId))
+            ->where('forma_recebimento', 'dinheiro')
+            ->sum('valor');
+
+        $pagamentosDinheiro = (float) Pagamento::query()
+            ->where('loja_id', $lojaId)
+            ->whereIn('status', ['pago', 'parcial'])
+            ->where('forma_pagamento', 'dinheiro')
+            ->sum('valor_pago');
+
+        $aportesDinheiro = (float) MovimentacaoInterna::query()
+            ->where('loja_id', $lojaId)
+            ->where('status', 'aprovada')
+            ->where('tipo', 'aporte')
+            ->whereNull('banco_destino_id')
+            ->sum('valor');
+
+        $sangriasDinheiro = (float) MovimentacaoInterna::query()
+            ->where('loja_id', $lojaId)
+            ->where('status', 'aprovada')
+            ->where('tipo', 'sangria')
+            ->whereNull('banco_origem_id')
+            ->sum('valor');
+
+        // Transferencias entre lojas saindo
+        $transfLojaSaida = (float) MovimentacaoInterna::query()
+            ->where('loja_id', $lojaId)
+            ->where('status', 'aprovada')
+            ->where('tipo', 'transferencia_loja')
+            ->sum('valor');
+
+        $transfLojaEntrada = (float) MovimentacaoInterna::query()
+            ->where('loja_destino_id', $lojaId)
+            ->where('status', 'aprovada')
+            ->where('tipo', 'transferencia_loja')
+            ->sum('valor');
+
+        $entradasCaixa = round($entradasDinheiro + $aportesDinheiro + $transfLojaEntrada, 2);
+        $saidasCaixa = round($pagamentosDinheiro + $sangriasDinheiro + $transfLojaSaida, 2);
+
+        $caixaDinheiro = [
+            'entradas' => $entradasCaixa,
+            'saidas' => $saidasCaixa,
+            'saldo' => round($entradasCaixa - $saidasCaixa, 2),
+        ];
+
+        $totalSaldo = round($saldosBancos->sum('saldo') + $caixaDinheiro['saldo'], 2);
+
+        return response()->json([
+            'bancos' => $saldosBancos->values(),
+            'caixa_dinheiro' => $caixaDinheiro,
+            'total' => $totalSaldo,
+        ]);
     }
 }

@@ -92,11 +92,12 @@ class CaixaController extends Controller
         unset($dados['itens']);
 
         $totalItens = $this->calcularTotalItens($itensPayload);
+        $desconto = round((float) ($dados['desconto'] ?? 0), 2);
 
         $forma = $dados['forma_recebimento'];
         $ehCartao = in_array($forma, ['cartao_debito', 'cartao_credito']);
 
-        $entrada = DB::transaction(function () use ($caixa, $dados, $forma, $ehCartao, $totalItens, $itensPayload) {
+        $entrada = DB::transaction(function () use ($caixa, $dados, $forma, $ehCartao, $totalItens, $itensPayload, $desconto) {
             if ($ehCartao) {
                 $lojaId = $caixa->loja_id;
 
@@ -124,9 +125,11 @@ class CaixaController extends Controller
                     throw new HttpResponseException(response()->json(['message' => 'Modalidade invalida.'], 422));
                 }
 
-                $valorBruto = array_key_exists('valor', $dados) && $dados['valor'] !== null
+                $valorBase = array_key_exists('valor', $dados) && $dados['valor'] !== null
                     ? (float) $dados['valor']
                     : $totalItens;
+
+                $valorBruto = round($valorBase - $desconto, 2);
 
                 if ($valorBruto <= 0) {
                     throw new HttpResponseException(response()->json(['message' => 'Valor da entrada invalido.'], 422));
@@ -148,12 +151,15 @@ class CaixaController extends Controller
                     'valor_bruto' => $valorBruto,
                     'com_antecipacao' => $calc['com_antecipacao'],
                     'valor' => $calc['valor_liquido'],
+                    'desconto' => $desconto,
                     'descricao' => $dados['descricao'] ?? null,
                 ]);
             } else {
-                $valorEntrada = array_key_exists('valor', $dados) && $dados['valor'] !== null
+                $valorBase = array_key_exists('valor', $dados) && $dados['valor'] !== null
                     ? (float) $dados['valor']
                     : $totalItens;
+
+                $valorEntrada = round($valorBase - $desconto, 2);
 
                 if ($valorEntrada <= 0) {
                     throw new HttpResponseException(response()->json(['message' => 'Valor da entrada invalido.'], 422));
@@ -163,6 +169,7 @@ class CaixaController extends Controller
                     'forma_recebimento' => $forma,
                     'banco_id' => $dados['banco_id'] ?? null,
                     'valor' => $valorEntrada,
+                    'desconto' => $desconto,
                     'descricao' => $dados['descricao'] ?? null,
                 ]);
             }

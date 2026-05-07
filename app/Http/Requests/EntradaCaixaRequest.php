@@ -22,6 +22,7 @@ class EntradaCaixaRequest extends FormRequest
             'forma_recebimento' => ['required', Rule::in(['dinheiro', 'pix', 'cartao_debito', 'cartao_credito'])],
             'banco_id' => ['nullable', 'exists:bancos,id'],
             'valor' => ['nullable', 'required_without:itens', 'numeric', 'min:0.01'],
+            'desconto' => ['nullable', 'numeric', 'min:0'],
             'descricao' => ['nullable', 'string', 'max:255'],
             'bandeira_id' => [$ehCartao ? 'required' : 'nullable', 'integer', 'exists:bandeiras,id'],
             'parcelas' => [

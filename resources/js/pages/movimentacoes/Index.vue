@@ -11,6 +11,59 @@
             </router-link>
         </div>
 
+        <!-- Saldos atuais -->
+        <div class="row g-3 mb-4">
+            <div class="col-12">
+                <div class="card p-3 border-start border-primary border-4">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <div class="text-muted small">Saldo total disponivel</div>
+                            <div class="fs-3 fw-bold" :class="saldos.total >= 0 ? 'text-primary' : 'text-danger'">
+                                R$ {{ fmt(saldos.total) }}
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" @click="loadSaldos" :disabled="loadingSaldos" title="Atualizar saldos">
+                            <span v-if="loadingSaldos" class="spinner-border spinner-border-sm"></span>
+                            <i v-else class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card p-3 h-100 border-start border-success border-4">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-muted small"><i class="bi bi-cash-stack"></i> Caixa Dinheiro</div>
+                            <div class="fs-4 fw-bold" :class="saldos.caixa_dinheiro.saldo >= 0 ? 'text-success' : 'text-danger'">
+                                R$ {{ fmt(saldos.caixa_dinheiro.saldo) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">
+                        Entradas: R$ {{ fmt(saldos.caixa_dinheiro.entradas) }} ·
+                        Saidas: R$ {{ fmt(saldos.caixa_dinheiro.saidas) }}
+                    </div>
+                </div>
+            </div>
+            <div v-for="b in saldos.bancos" :key="b.id" class="col-12 col-md-6 col-lg-4">
+                <div class="card p-3 h-100 border-start border-info border-4" :class="{ 'opacity-75': !b.ativo }">
+                    <div>
+                        <div class="text-muted small">
+                            <i class="bi bi-bank"></i> {{ b.nome }}
+                            <span v-if="!b.ativo" class="badge bg-secondary ms-1">inativo</span>
+                        </div>
+                        <div class="fs-4 fw-bold" :class="b.saldo >= 0 ? 'text-info' : 'text-danger'">
+                            R$ {{ fmt(b.saldo) }}
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">
+                        Entradas: R$ {{ fmt(b.entradas) }} ·
+                        Saidas: R$ {{ fmt(b.saidas) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Filtros -->
         <div class="card p-3 mb-4">
             <div class="row g-2 align-items-end">
@@ -137,6 +190,12 @@ const movimentacoes = ref([]);
 const totalPendentes = ref(0);
 const tipos = { transferencia_banco: 'Transf. Banco', sangria: 'Sangria', aporte: 'Aporte', transferencia_loja: 'Transf. Loja' };
 const filters = reactive({ tipo: '', status: '', data_inicio: '', data_fim: '' });
+const loadingSaldos = ref(false);
+const saldos = reactive({
+    bancos: [],
+    caixa_dinheiro: { entradas: 0, saidas: 0, saldo: 0 },
+    total: 0,
+});
 
 const movSelecionada = ref(null);
 const motivoRejeicao = ref('');
@@ -150,6 +209,20 @@ async function load() {
     const { data } = await axios.get('/movimentacoes-internas', { params });
     movimentacoes.value = data.data;
     totalPendentes.value = movimentacoes.value.filter(m => m.status === 'solicitada').length;
+}
+
+async function loadSaldos() {
+    loadingSaldos.value = true;
+    try {
+        const { data } = await axios.get('/movimentacoes-internas-saldos');
+        saldos.bancos = data.bancos || [];
+        saldos.caixa_dinheiro = data.caixa_dinheiro || { entradas: 0, saidas: 0, saldo: 0 };
+        saldos.total = data.total || 0;
+    } catch {
+        // mantem ultimos valores
+    } finally {
+        loadingSaldos.value = false;
+    }
 }
 
 function clearFilters() {
@@ -186,6 +259,7 @@ async function aprovar(m) {
         await axios.post('/movimentacoes-internas/' + m.id + '/aprovar');
         swalSuccess('Movimentacao aprovada.');
         load();
+        loadSaldos();
     } catch (e) {
         swalError(e.response?.data?.message || 'Erro ao aprovar.');
     }
@@ -211,6 +285,7 @@ async function confirmarRejeicao() {
         modalInstance.hide();
         swalSuccess('Movimentacao rejeitada.');
         load();
+        loadSaldos();
     } catch (e) {
         swalError(e.response?.data?.message || 'Erro ao rejeitar.');
     } finally { rejLoading.value = false; }
@@ -222,6 +297,7 @@ async function destroy(m) {
         await axios.delete('/movimentacoes-internas/' + m.id);
         swalSuccess('Movimentacao removida.');
         load();
+        loadSaldos();
     } catch (e) {
         swalError(e.response?.data?.message || 'Erro ao remover.');
     }
@@ -230,5 +306,8 @@ async function destroy(m) {
 function fmt(v) { return Number(v || 0).toFixed(2).replace('.', ','); }
 function fmtDate(d) { const s = typeof d === 'string' ? d.slice(0, 10) : d; return new Date(s + 'T12:00:00').toLocaleDateString('pt-BR'); }
 
-onMounted(load);
+onMounted(() => {
+    load();
+    loadSaldos();
+});
 </script>
