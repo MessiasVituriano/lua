@@ -95,6 +95,9 @@
                                 <router-link :to="{ name: 'caixa.show', params: { id: c.id } }" class="btn btn-sm btn-outline-info">
                                     <i class="bi bi-eye"></i>
                                 </router-link>
+                                <button v-if="c.status === 'aberto'" class="btn btn-sm btn-outline-danger" @click="fechar(c)" title="Fechar caixa">
+                                    <i class="bi bi-lock-fill"></i>
+                                </button>
                                 <button v-if="c.status === 'pendente'" class="btn btn-sm btn-outline-success" @click="autorizar(c)" title="Autorizar fechamento">
                                     <i class="bi bi-check-lg"></i>
                                 </button>
@@ -203,6 +206,23 @@ async function autorizar(c) {
         load();
     } catch (e) {
         swalError(e.response?.data?.message || 'Erro ao autorizar.');
+    }
+}
+
+async function fechar(c) {
+    const msg = userIsAdmin.value
+        ? 'Fechar o caixa de ' + fmtDate(c.data) + ' definitivamente?'
+        : 'Enviar o caixa de ' + fmtDate(c.data) + ' para aprovacao do administrador?';
+    if (!(await swalConfirmSuccess('Fechar Caixa', msg))) return;
+    try {
+        const { data } = await axios.post('/caixa/' + c.id + '/fechar');
+        swalSuccess(data.status === 'pendente'
+            ? 'Caixa enviado para autorizacao do administrador.'
+            : 'Caixa fechado com sucesso.'
+        );
+        load();
+    } catch (e) {
+        swalError(e.response?.data?.message || 'Erro ao fechar caixa.');
     }
 }
 

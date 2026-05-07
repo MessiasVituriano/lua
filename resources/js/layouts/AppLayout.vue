@@ -139,6 +139,10 @@
                     <Moon v-if="theme.mode === 'light'" :size="15" />
                     <Sun v-else :size="15" />
                 </button>
+
+                <button class="topbar-logout" @click="handleLogout" title="Sair" aria-label="Sair">
+                    <LogOut :size="15" />
+                </button>
             </div>
         </div>
 
@@ -505,6 +509,25 @@ async function handleLogout() {
     gap: 0.375rem;
     font-size: 0.8125rem;
     color: var(--lua-text-muted);
+}
+
+.topbar-logout {
+    background: var(--lua-surface);
+    border: 1px solid var(--lua-border);
+    border-radius: var(--lua-radius-sm, 6px);
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--lua-text-muted);
+    transition: all 0.15s ease;
+}
+.topbar-logout:hover {
+    color: var(--lua-danger);
+    border-color: var(--lua-danger);
+    background: var(--lua-danger-soft);
 }
 
 /* ============ Content ============ */

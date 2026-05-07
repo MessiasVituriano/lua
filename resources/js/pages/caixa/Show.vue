@@ -47,8 +47,29 @@
 
         <!-- Entradas -->
         <div class="card">
-            <div class="card-header bg-white">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h6 class="mb-0">Entradas</h6>
+                <div class="d-flex align-items-center gap-2">
+                    <button v-if="caixa.status === 'aberto'" class="btn btn-sm btn-outline-danger" @click="fecharCaixa">
+                        <i class="bi bi-lock-fill"></i> Fechar Caixa
+                    </button>
+                    <template v-else-if="caixa.status === 'pendente'">
+                        <span class="badge bg-warning text-dark">
+                            <i class="bi bi-hourglass-split"></i> Pendente ({{ caixa.fechado_por?.name }})
+                        </span>
+                        <button v-if="userIsAdmin" class="btn btn-sm btn-success" @click="autorizarCaixa">
+                            <i class="bi bi-check-lg"></i> Aprovar
+                        </button>
+                        <button v-if="userIsAdmin" class="btn btn-sm btn-outline-primary" @click="reabrirCaixa">
+                            <i class="bi bi-unlock-fill"></i> Reabrir
+                        </button>
+                    </template>
+                    <template v-else>
+                        <button v-if="userIsAdmin" class="btn btn-sm btn-outline-primary" @click="reabrirCaixa">
+                            <i class="bi bi-unlock-fill"></i> Reabrir
+                        </button>
+                    </template>
+                </div>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
@@ -79,20 +100,65 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
+import { useAuthStore } from '../../stores/auth';
+import { swalSuccess, swalError, swalConfirmSuccess, swalConfirmInfo } from '../../utils/swal';
 
 const route = useRoute();
+const auth = useAuthStore();
+const userIsAdmin = computed(() => auth.user?.role === 'admin');
 const caixa = ref(null);
 const totaisPorForma = ref({});
 const formas = { dinheiro: 'Dinheiro', pix: 'PIX', cartao_debito: 'Cartão Débito', cartao_credito: 'Cartão Crédito' };
 
 function fmt(v) { return Number(v || 0).toFixed(2).replace('.', ','); }
 
-onMounted(async () => {
+async function loadCaixa() {
     const { data } = await axios.get('/caixa/' + route.params.id);
     caixa.value = data.caixa;
     totaisPorForma.value = data.totais_por_forma || {};
-});
+}
+
+async function fecharCaixa() {
+    const msg = userIsAdmin.value
+        ? 'Fechar o caixa definitivamente?'
+        : 'Enviar o caixa para aprovacao do administrador?';
+    if (!(await swalConfirmSuccess('Fechar Caixa', msg))) return;
+    try {
+        const { data } = await axios.post('/caixa/' + caixa.value.id + '/fechar');
+        swalSuccess(data.status === 'pendente'
+            ? 'Caixa enviado para autorizacao do administrador.'
+            : 'Caixa fechado com sucesso.'
+        );
+        await loadCaixa();
+    } catch (e) {
+        swalError(e.response?.data?.message || 'Erro ao fechar caixa.');
+    }
+}
+
+async function autorizarCaixa() {
+    if (!(await swalConfirmSuccess('Aprovar Fechamento?', 'O caixa sera fechado definitivamente.'))) return;
+    try {
+        await axios.post('/caixa/' + caixa.value.id + '/autorizar');
+        swalSuccess('Caixa aprovado e fechado com sucesso.');
+        await loadCaixa();
+    } catch (e) {
+        swalError(e.response?.data?.message || 'Erro ao autorizar caixa.');
+    }
+}
+
+async function reabrirCaixa() {
+    if (!(await swalConfirmInfo('Reabrir Caixa?', 'As entradas serao preservadas.'))) return;
+    try {
+        await axios.post('/caixa/' + caixa.value.id + '/reabrir');
+        swalSuccess('Caixa reaberto com sucesso.');
+        await loadCaixa();
+    } catch (e) {
+        swalError(e.response?.data?.message || 'Erro ao reabrir caixa.');
+    }
+}
+
+onMounted(loadCaixa);
 </script>

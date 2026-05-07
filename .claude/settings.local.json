@@ -31,7 +31,10 @@
       "Bash(php artisan *)",
       "Bash(php -l app/Http/Controllers/Api/CaixaController.php)",
       "Bash(php -l app/Http/Controllers/Api/PagamentoController.php)",
-      "Bash(php -l app/Http/Controllers/Api/DashboardController.php)"
+      "Bash(php -l app/Http/Controllers/Api/DashboardController.php)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

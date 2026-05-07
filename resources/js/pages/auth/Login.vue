@@ -50,13 +50,6 @@
             </div>
         </div>
 
-        <div class="remember-row">
-            <label class="remember">
-                <input type="checkbox" v-model="form.remember">
-                <span>Lembrar de mim</span>
-            </label>
-        </div>
-
         <button type="submit" class="btn btn-lua w-100 btn-submit" :disabled="loading">
             <span v-if="loading" class="spinner-border spinner-border-sm"></span>
             <span v-else>Entrar</span>
@@ -76,7 +69,7 @@ const auth = useAuthStore();
 const loading = ref(false);
 const showPassword = ref(false);
 const errors = reactive({ email: '', general: '' });
-const form = reactive({ email: '', password: '', remember: false });
+const form = reactive({ email: '', password: '' });
 
 async function handleLogin() {
     errors.email = '';
@@ -130,27 +123,6 @@ async function handleLogin() {
 
 .login-form { display: flex; flex-direction: column; gap: 1rem; }
 .field { display: flex; flex-direction: column; }
-
-.remember-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: -0.25rem;
-}
-.remember {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8125rem;
-    color: var(--lua-text-soft);
-    cursor: pointer;
-    user-select: none;
-}
-.remember input[type="checkbox"] {
-    accent-color: var(--lua-primary);
-    width: 14px;
-    height: 14px;
-}
 
 .btn-submit {
     justify-content: center;
