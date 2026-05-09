@@ -65,12 +65,89 @@ class PagamentoController extends Controller
     public function store(PagamentoRequest $request)
     {
         $data = $request->validated();
+        $quantidadeParcelas = max(1, (int) ($data['quantidade_parcelas'] ?? 1));
+        $recorrenciaDias = max(1, (int) ($data['recorrencia_dias'] ?? 30));
+        $dataPrimeiroPagamento = $data['data_primeiro_pagamento'] ?? $data['data_vencimento'];
+        $parcelasLote = collect($data['parcelas_lote'] ?? []);
+
+        unset($data['quantidade_parcelas'], $data['recorrencia_dias'], $data['data_primeiro_pagamento'], $data['parcelas_lote']);
+
         $data['loja_id'] = auth()->user()->loja_id;
         $data['status'] = 'pendente';
 
-        $pagamento = Pagamento::create($data);
+        if ($quantidadeParcelas <= 1) {
+            $pagamento = Pagamento::create($data);
+            return response()->json($pagamento->load(['fornecedor', 'banco']), 201);
+        }
 
-        return response()->json($pagamento->load(['fornecedor', 'banco']), 201);
+        if ($parcelasLote->isNotEmpty() && $parcelasLote->count() !== $quantidadeParcelas) {
+            return response()->json(['message' => 'A quantidade de parcelas no lote nao confere com a quantidade selecionada.'], 422);
+        }
+
+        $valorTotalCentavos = (int) round(((float) $data['valor_total']) * 100);
+        $parcelasConfiguradas = $parcelasLote->isNotEmpty()
+            ? $parcelasLote->values()->map(function ($parcela, $idx) {
+                return [
+                    'numero' => $idx + 1,
+                    'data_vencimento' => Carbon::parse($parcela['data_vencimento'])->toDateString(),
+                    'valor_total' => (float) $parcela['valor_total'],
+                ];
+            })
+            : $this->gerarParcelasPadrao($quantidadeParcelas, $recorrenciaDias, $dataPrimeiroPagamento, $valorTotalCentavos);
+
+        $totalParcelasCentavos = (int) round($parcelasConfiguradas->sum(function ($parcela) {
+            return ((float) $parcela['valor_total']) * 100;
+        }));
+
+        if ($totalParcelasCentavos !== $valorTotalCentavos) {
+            return response()->json(['message' => 'A soma dos valores das parcelas deve ser igual ao valor total informado.'], 422);
+        }
+
+        $descricaoBase = $data['descricao'];
+
+        $pagamentosCriados = collect();
+
+        foreach ($parcelasConfiguradas as $parcela) {
+            $item = $data;
+            $item['descricao'] = $descricaoBase . ' (' . $parcela['numero'] . '/' . $quantidadeParcelas . ')';
+            $item['valor_total'] = (float) $parcela['valor_total'];
+            $item['recorrente'] = false;
+            $item['dia_recorrencia'] = null;
+            $item['data_vencimento'] = $parcela['data_vencimento'];
+
+            $pagamentosCriados->push(Pagamento::create($item));
+        }
+
+        $pagamentosIds = $pagamentosCriados->pluck('id')->all();
+        $pagamentosComRelacoes = Pagamento::with(['fornecedor', 'banco'])
+            ->whereIn('id', $pagamentosIds)
+            ->orderBy('id')
+            ->get();
+
+        return response()->json([
+            'parcelado' => true,
+            'total_parcelas' => $quantidadeParcelas,
+            'pagamentos' => $pagamentosComRelacoes,
+        ], 201);
+    }
+
+    private function gerarParcelasPadrao(int $quantidadeParcelas, int $recorrenciaDias, string $dataPrimeiroPagamento, int $valorTotalCentavos)
+    {
+        $baseCentavos = intdiv($valorTotalCentavos, $quantidadeParcelas);
+        $restoCentavos = $valorTotalCentavos % $quantidadeParcelas;
+        $dataInicial = Carbon::parse($dataPrimeiroPagamento)->startOfDay();
+
+        $parcelas = collect();
+        for ($i = 0; $i < $quantidadeParcelas; $i++) {
+            $valorParcelaCentavos = $baseCentavos + ($i < $restoCentavos ? 1 : 0);
+            $parcelas->push([
+                'numero' => $i + 1,
+                'valor_total' => $valorParcelaCentavos / 100,
+                'data_vencimento' => (clone $dataInicial)->addDays($i * $recorrenciaDias)->toDateString(),
+            ]);
+        }
+
+        return $parcelas;
     }
 
     public function show(Pagamento $pagamento)
