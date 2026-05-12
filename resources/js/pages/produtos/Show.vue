@@ -17,7 +17,7 @@
                         <span class="text-muted small">Fornecedor</span>
                         <div>{{ produto.fornecedor?.nome || '-' }}</div>
                     </div>
-                    <div class="row mb-2">
+                    <div v-if="isAdmin" class="row mb-2">
                         <div class="col-4">
                             <span class="text-muted small">Custo</span>
                             <div>R$ {{ fmt(produto.valor_custo) }}</div>
@@ -39,7 +39,7 @@
                         </div>
                     </div>
                     <div class="d-flex gap-2 mt-2">
-                        <router-link :to="{ name: 'produtos.edit', params: { id: produto.id } }" class="btn btn-sm btn-outline-primary">
+                        <router-link v-if="isAdmin" :to="{ name: 'produtos.edit', params: { id: produto.id } }" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-pencil"></i> Editar
                         </router-link>
                         <router-link :to="{ name: 'produtos.index' }" class="btn btn-sm btn-outline-secondary">
@@ -115,8 +115,11 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
 import { swalSuccess, swalError } from '../../utils/swal';
+import { useAuthStore } from '../../stores/auth';
 
 const route = useRoute();
+const auth = useAuthStore();
+const isAdmin = computed(() => auth.user?.role === 'admin');
 const produto = ref(null);
 const movimentacoes = ref([]);
 const movForm = reactive({ tipo: 'entrada', quantidade: '', motivo: '' });

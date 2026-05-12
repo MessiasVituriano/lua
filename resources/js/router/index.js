@@ -133,7 +133,8 @@ router.beforeEach(async (to, from, next) => {
         'planos-maquininha.index', 'planos-maquininha.create', 'planos-maquininha.edit',
         'caixa.historico', 'pagamentos.index', 'pagamentos.calendario', 'pagamentos.create', 'pagamentos.edit',
         'movimentacoes.index', 'movimentacoes.create', 'movimentacoes.edit',
-        'alertas-metricas.index'];
+        'alertas-metricas.index',
+        'produtos.create', 'produtos.edit'];
     if (auth.user && auth.user.role !== 'admin' && adminRoutes.includes(to.name)) {
         return next({ name: 'caixa.hoje' });
     }

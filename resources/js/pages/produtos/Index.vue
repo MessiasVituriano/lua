@@ -2,7 +2,7 @@
     <div>
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div></div>
-            <router-link :to="{ name: 'produtos.create' }" class="btn btn-lua">
+            <router-link v-if="isAdmin" :to="{ name: 'produtos.create' }" class="btn btn-lua">
                 <i class="bi bi-plus-lg"></i> Novo Produto
             </router-link>
         </div>
@@ -49,9 +49,9 @@
                             <th>Nome</th>
                             <th>Categoria</th>
                             <th>Fornecedor</th>
-                            <th>Custo</th>
-                            <th>Margem</th>
-                            <th>Venda</th>
+                            <th v-if="isAdmin">Custo</th>
+                            <th v-if="isAdmin">Margem</th>
+                            <th v-if="isAdmin">Venda</th>
                             <th>Estoque</th>
                             <th width="200">Acoes</th>
                         </tr>
@@ -61,9 +61,9 @@
                             <td class="fw-semibold">{{ p.nome }}</td>
                             <td><span class="badge bg-secondary">{{ categorias[p.categoria] }}</span></td>
                             <td>{{ p.fornecedor?.nome || '-' }}</td>
-                            <td>R$ {{ fmt(p.valor_custo) }}</td>
-                            <td>{{ p.margem }}%</td>
-                            <td class="fw-bold">R$ {{ fmt(p.valor_venda) }}</td>
+                            <td v-if="isAdmin">R$ {{ fmt(p.valor_custo) }}</td>
+                            <td v-if="isAdmin">{{ p.margem }}%</td>
+                            <td v-if="isAdmin" class="fw-bold">R$ {{ fmt(p.valor_venda) }}</td>
                             <td>
                                 {{ p.estoque_atual }}
                                 <span v-if="p.estoque_min !== null && p.estoque_atual <= p.estoque_min" class="text-danger">
@@ -74,16 +74,16 @@
                                 <router-link :to="{ name: 'produtos.show', params: { id: p.id } }" class="btn btn-sm btn-outline-info me-1">
                                     <i class="bi bi-eye"></i>
                                 </router-link>
-                                <router-link :to="{ name: 'produtos.edit', params: { id: p.id } }" class="btn btn-sm btn-outline-primary me-1">
+                                <router-link v-if="isAdmin" :to="{ name: 'produtos.edit', params: { id: p.id } }" class="btn btn-sm btn-outline-primary me-1">
                                     <i class="bi bi-pencil"></i>
                                 </router-link>
-                                <button class="btn btn-sm btn-outline-danger" @click="destroy(p)">
+                                <button v-if="isAdmin" class="btn btn-sm btn-outline-danger" @click="destroy(p)">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
                         </tr>
                         <tr v-if="produtos.length === 0">
-                            <td colspan="8" class="text-center text-muted py-4">Nenhum produto encontrado.</td>
+                            <td :colspan="isAdmin ? 8 : 5" class="text-center text-muted py-4">Nenhum produto encontrado.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -93,9 +93,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { swalSuccess, swalConfirmDanger } from '../../utils/swal';
+import { useAuthStore } from '../../stores/auth';
+
+const auth = useAuthStore();
+const isAdmin = computed(() => auth.user?.role === 'admin');
+
 const produtos = ref([]);
 const fornecedores = ref([]);
 const categorias = { racao: 'Ração', medicamento: 'Medicamento', acessorio: 'Acessório', higiene: 'Higiene', petisco: 'Petisco' };
