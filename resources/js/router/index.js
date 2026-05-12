@@ -131,7 +131,9 @@ router.beforeEach(async (to, from, next) => {
         'bancos.index', 'bancos.create', 'bancos.edit', 'usuarios.index', 'usuarios.create', 'usuarios.edit',
         'bandeiras.index', 'bandeiras.create', 'bandeiras.edit',
         'planos-maquininha.index', 'planos-maquininha.create', 'planos-maquininha.edit',
-        'caixa.historico', 'pagamentos.index', 'pagamentos.calendario', 'pagamentos.create', 'pagamentos.edit'];
+        'caixa.historico', 'pagamentos.index', 'pagamentos.calendario', 'pagamentos.create', 'pagamentos.edit',
+        'movimentacoes.index', 'movimentacoes.create', 'movimentacoes.edit',
+        'alertas-metricas.index'];
     if (auth.user && auth.user.role !== 'admin' && adminRoutes.includes(to.name)) {
         return next({ name: 'caixa.hoje' });
     }

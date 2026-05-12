@@ -28,7 +28,7 @@
             </div>
 
             <!-- Resumo -->
-            <div class="row g-3 mb-4">
+            <div v-if="userIsAdmin" class="row g-3 mb-4">
                 <div class="col-6 col-lg-4">
                     <div class="card p-3 border-start border-success border-4">
                         <div class="text-muted small">Total Entradas</div>
@@ -52,7 +52,7 @@
             </div>
 
             <!-- Totais por forma -->
-            <div class="row g-3 mb-4">
+            <div v-if="userIsAdmin" class="row g-3 mb-4">
                 <div class="col-6 col-md-3" v-for="(label, key) in formas" :key="key">
                     <div class="card p-2 text-center">
                         <div class="text-muted small">{{ label }}</div>
@@ -85,7 +85,7 @@
                                 {{ ehCartao ? 'Valor bruto *' : 'Valor *' }}
                                 <span v-if="form.itens.length" class="text-muted" style="font-size:0.7rem"> (auto)</span>
                             </label>
-                            <input type="number" step="0.01" min="0.01" class="form-control" v-model="form.valor" :required="!form.itens.length" :readonly="form.itens.length > 0" ref="valorInput">
+                            <input type="number" step="0.01" min="0.01" class="form-control" v-model="form.valor" :required="!form.itens.length" ref="valorInput">
                         </div>
                         <div class="col-6 col-md-2">
                             <label class="form-label small">Desconto</label>
@@ -282,17 +282,29 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-4">
-                                        <label class="form-label small mb-1">Qtd</label>
-                                        <input type="number" step="0.001" min="0.001" class="form-control form-control-sm" v-model.number="item.quantidade" @input="recalcularSubtotal(item)">
+                                    <div v-if="!itemEhRacao(item)" class="col-4">
+                                        <label class="form-label small mb-1">Unidade</label>
+                                        <input
+                                            type="number"
+                                            step="1"
+                                            min="1"
+                                            class="form-control form-control-sm"
+                                            v-model.number="item.quantidade"
+                                            @input="recalcularSubtotal(item)"
+                                        >
                                     </div>
+                                    <input v-else type="hidden" v-model.number="item.quantidade">
                                     <div class="col-4">
                                         <label class="form-label small mb-1">Preco Unit.</label>
                                         <input type="number" step="0.01" min="0" class="form-control form-control-sm" v-model.number="item.preco_unitario" @input="recalcularSubtotal(item)">
                                     </div>
-                                    <div class="col-4">
+                                    <div v-if="itemEhRacao(item)" class="col-4">
                                         <label class="form-label small mb-1">Peso (kg)</label>
                                         <input type="number" step="0.001" min="0.001" class="form-control form-control-sm" :value="pesoKgFromGramas(item.peso_gramas)" @input="onPesoKgInput(item, $event.target.value)" placeholder="Ex: 1,5">
+                                    </div>
+                                    <div v-else class="col-4">
+                                        <label class="form-label small mb-1">Tipo</label>
+                                        <input type="text" class="form-control form-control-sm" value="Venda por unidade" disabled>
                                     </div>
                                     <div class="col-6">
                                         <label class="form-label small mb-1">Perfil (auto)</label>
@@ -553,9 +565,12 @@ const totaisFormaCalc = computed(() => {
     });
     return t;
 });
-const entradasOrdenadas = computed(() => [...entradas.value].sort((a, b) => {
-    return new Date(b.created_at) - new Date(a.created_at);
-}));
+const entradasOrdenadas = computed(() => {
+    const lista = userIsAdmin.value
+        ? entradas.value
+        : entradas.value.filter(e => e.user_id === auth.user?.id);
+    return [...lista].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+});
 const totalItens = computed(() => {
     return form.itens.reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
 });
@@ -782,38 +797,29 @@ async function criarClientePetRapido() {
     }
 }
 
-function extrairPesoEmbalagemGramas(nomeProduto) {
-    if (!nomeProduto) return null;
-
-    // Suporta formatos: 15kg, 7,5kg, 500g
-    const matchKg = nomeProduto.match(/(\d+(?:[\.,]\d+)?)\s*kg/i);
-    if (matchKg) {
-        const kg = parseFloat(String(matchKg[1]).replace(',', '.'));
-        return Number.isFinite(kg) && kg > 0 ? Math.round(kg * 1000) : null;
-    }
-
-    const matchG = nomeProduto.match(/(\d+(?:[\.,]\d+)?)\s*g/i);
-    if (matchG) {
-        const g = parseFloat(String(matchG[1]).replace(',', '.'));
-        return Number.isFinite(g) && g > 0 ? Math.round(g) : null;
-    }
-
-    return null;
-}
-
 function onItemProdutoChange(item) {
     const produto = produtosRacaoFavoritos.value.find(p => p.id === item.produto_id);
-    const pesoEmbalagem = extrairPesoEmbalagemGramas(produto?.nome);
+    const ehRacao = produto?.categoria === 'racao';
 
-    if (produto && (item.preco_unitario === null || item.preco_unitario === '' || Number(item.preco_unitario) <= 0)) {
+    if (produto) {
         item.preco_unitario = parseFloat(produto.valor_venda || 0);
     }
 
-    if (pesoEmbalagem && (!item.peso_gramas || Number(item.peso_gramas) <= 0)) {
-        item.peso_gramas = pesoEmbalagem;
+    if (ehRacao) {
+        item.quantidade = 1;
+    }
+
+    // Produtos nao-racao (ex.: medicamento) nao usam peso em kg.
+    if (!ehRacao) {
+        item.peso_gramas = null;
     }
 
     recalcularSubtotal(item);
+}
+
+function itemEhRacao(item) {
+    const produto = produtosRacaoFavoritos.value.find(p => p.id === item?.produto_id);
+    return produto?.categoria === 'racao';
 }
 
 function pesoKgFromGramas(g) {
@@ -840,17 +846,8 @@ function onPesoKgInput(item, raw) {
 
 function recalcularSubtotal(item) {
     const pu = parseFloat(item.preco_unitario || 0);
-    if (item.peso_gramas > 0) {
-        const produto = produtosRacaoFavoritos.value.find(p => p.id === item.produto_id);
-        const pesoEmbalagem = extrairPesoEmbalagemGramas(produto?.nome);
-
-        // preco_unitario = preco da embalagem; subtotal proporcional ao peso vendido em gramas
-        if (pesoEmbalagem && pesoEmbalagem > 0) {
-            item.subtotal = Math.round((item.peso_gramas / pesoEmbalagem) * pu * 100) / 100;
-            return;
-        }
-
-        // Fallback: se nao identificar embalagem, considera preco por kg
+    if (itemEhRacao(item) && Number(item.peso_gramas) > 0) {
+        // Em vendas por peso, considera preco_unitario como preco por kg.
         item.subtotal = Math.round((item.peso_gramas / 1000) * pu * 100) / 100;
     } else {
         const qtd = parseFloat(item.quantidade || 0);
@@ -859,7 +856,6 @@ function recalcularSubtotal(item) {
 }
 
 function adicionarItemRapidoRacao(produto) {
-    const pesoEmbalagem = extrairPesoEmbalagemGramas(produto?.nome);
     const petPadrao = petById(petSelecionadoId.value) || petsClienteSelecionado.value[0] || null;
     const item = {
         ...itemBase(),
@@ -867,7 +863,7 @@ function adicionarItemRapidoRacao(produto) {
         _busca: produto.nome,
         quantidade: 1,
         preco_unitario: parseFloat(produto.valor_venda || 0),
-        peso_gramas: pesoEmbalagem || 1000,
+        peso_gramas: null,
         perfil_pet_tipo: resolverPerfilAutomaticoPorPet(petPadrao) || 'outros',
         pet_id: petPadrao?.id || null,
         cliente_id: clienteSelecionado.value?.id || petPadrao?.cliente_id || null,

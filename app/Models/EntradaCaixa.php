@@ -13,6 +13,7 @@ class EntradaCaixa extends Model
 
     protected $fillable = [
         'caixa_diario_id',
+        'user_id',
         'forma_recebimento',
         'banco_id',
         'plano_maquininha_id',

@@ -143,6 +143,7 @@ class CaixaController extends Controller
 
                 $entrada = $caixa->entradas()->create([
                     'forma_recebimento' => $forma,
+                    'user_id' => auth()->id(),
                     'banco_id' => $dados['banco_id'] ?? null,
                     'plano_maquininha_id' => $plano->id,
                     'bandeira_id' => $bandeira->id,
@@ -167,6 +168,7 @@ class CaixaController extends Controller
 
                 $entrada = $caixa->entradas()->create([
                     'forma_recebimento' => $forma,
+                    'user_id' => auth()->id(),
                     'banco_id' => $dados['banco_id'] ?? null,
                     'valor' => $valorEntrada,
                     'desconto' => $desconto,

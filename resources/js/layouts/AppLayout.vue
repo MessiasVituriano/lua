@@ -56,12 +56,12 @@
                 <Wallet :size="16" class="nav-icon" />
                 <span>Caixa do Dia</span>
             </router-link>
-            <router-link class="nav-item" active-class="active" :to="{ name: 'movimentacoes.index' }" @click="closeMobile">
+            <router-link class="nav-item" active-class="active" :to="{ name: 'movimentacoes.index' }" v-if="isAdmin" @click="closeMobile">
                 <ArrowLeftRight :size="16" class="nav-icon" />
                 <span>Movimentações</span>
-                <span v-if="isAdmin && movPendentesCount > 0" class="nav-badge warning">{{ movPendentesCount }}</span>
+                <span v-if="movPendentesCount > 0" class="nav-badge warning">{{ movPendentesCount }}</span>
             </router-link>
-            <router-link class="nav-item" active-class="active" :to="{ name: 'alertas-metricas.index' }" @click="closeMobile">
+            <router-link class="nav-item" active-class="active" :to="{ name: 'alertas-metricas.index' }" v-if="isAdmin" @click="closeMobile">
                 <AlertTriangle :size="16" class="nav-icon" />
                 <span>Alertas e Métricas</span>
             </router-link>
