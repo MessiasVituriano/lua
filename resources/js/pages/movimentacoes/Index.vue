@@ -45,6 +45,22 @@
                     </div>
                 </div>
             </div>
+            <div class="col-12 col-md-6 col-lg-4" v-if="saldos.formas?.banco">
+                <div class="card p-3 h-100 border-start border-info border-4">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-muted small"><i class="bi bi-bank"></i> Caixa Bancos (forma)</div>
+                            <div class="fs-4 fw-bold" :class="saldos.formas.banco.saldo >= 0 ? 'text-info' : 'text-danger'">
+                                R$ {{ fmt(saldos.formas.banco.saldo) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">
+                        Entradas: R$ {{ fmt(saldos.formas.banco.entradas) }} ·
+                        Saidas: R$ {{ fmt(saldos.formas.banco.saidas) }}
+                    </div>
+                </div>
+            </div>
             <div v-for="b in saldos.bancos" :key="b.id" class="col-12 col-md-6 col-lg-4">
                 <div class="card p-3 h-100 border-start border-info border-4" :class="{ 'opacity-75': !b.ativo }">
                     <div>
@@ -194,6 +210,10 @@ const loadingSaldos = ref(false);
 const saldos = reactive({
     bancos: [],
     caixa_dinheiro: { entradas: 0, saidas: 0, saldo: 0 },
+    formas: {
+        dinheiro: { entradas: 0, saidas: 0, saldo: 0 },
+        banco: { entradas: 0, saidas: 0, saldo: 0 },
+    },
     total: 0,
 });
 
@@ -217,6 +237,10 @@ async function loadSaldos() {
         const { data } = await axios.get('/movimentacoes-internas-saldos');
         saldos.bancos = data.bancos || [];
         saldos.caixa_dinheiro = data.caixa_dinheiro || { entradas: 0, saidas: 0, saldo: 0 };
+        saldos.formas = data.formas || {
+            dinheiro: { entradas: 0, saidas: 0, saldo: 0 },
+            banco: { entradas: 0, saidas: 0, saldo: 0 },
+        };
         saldos.total = data.total || 0;
     } catch {
         // mantem ultimos valores

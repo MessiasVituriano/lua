@@ -9,7 +9,6 @@ use App\Models\EntradaCaixa;
 use App\Models\MovimentacaoInterna;
 use App\Models\Pagamento;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class MovimentacaoInternaController extends Controller
 {
@@ -164,31 +163,35 @@ class MovimentacaoInternaController extends Controller
             ->where('status', 'aprovada')
             ->whereIn('tipo', ['aporte', 'transferencia_banco'])
             ->whereNotNull('banco_destino_id')
+            ->selectRaw('banco_destino_id, SUM(valor) as total')
             ->groupBy('banco_destino_id')
-            ->pluck(DB::raw('SUM(valor)'), 'banco_destino_id');
+            ->pluck('total', 'banco_destino_id');
 
         $movSaidasPorBanco = MovimentacaoInterna::query()
             ->where('loja_id', $lojaId)
             ->where('status', 'aprovada')
             ->whereIn('tipo', ['sangria', 'transferencia_banco'])
             ->whereNotNull('banco_origem_id')
+            ->selectRaw('banco_origem_id, SUM(valor) as total')
             ->groupBy('banco_origem_id')
-            ->pluck(DB::raw('SUM(valor)'), 'banco_origem_id');
+            ->pluck('total', 'banco_origem_id');
 
         // Entradas de caixa creditadas em banco (cartao, pix com banco)
         $entradasCaixaPorBanco = EntradaCaixa::query()
             ->whereHas('caixaDiario', fn ($q) => $q->where('loja_id', $lojaId))
             ->whereNotNull('banco_id')
+            ->selectRaw('banco_id, SUM(valor) as total')
             ->groupBy('banco_id')
-            ->pluck(DB::raw('SUM(valor)'), 'banco_id');
+            ->pluck('total', 'banco_id');
 
         // Pagamentos efetuados por banco
         $pagamentosPorBanco = Pagamento::query()
             ->where('loja_id', $lojaId)
             ->whereIn('status', ['pago', 'parcial'])
             ->whereNotNull('banco_id')
+            ->selectRaw('banco_id, SUM(valor_pago) as total')
             ->groupBy('banco_id')
-            ->pluck(DB::raw('SUM(valor_pago)'), 'banco_id');
+            ->pluck('total', 'banco_id');
 
         $saldosBancos = $bancos->map(function ($banco) use ($movEntradasPorBanco, $movSaidasPorBanco, $entradasCaixaPorBanco, $pagamentosPorBanco) {
             $entradas = (float) ($movEntradasPorBanco[$banco->id] ?? 0)
@@ -232,6 +235,25 @@ class MovimentacaoInternaController extends Controller
             ->whereNull('banco_origem_id')
             ->sum('valor');
 
+        // Transferencias entre dinheiro e banco:
+        // - caixa -> banco: sai do dinheiro
+        // - banco -> caixa: entra no dinheiro
+        $transfDinheiroParaBanco = (float) MovimentacaoInterna::query()
+            ->where('loja_id', $lojaId)
+            ->where('status', 'aprovada')
+            ->where('tipo', 'transferencia_banco')
+            ->whereNull('banco_origem_id')
+            ->whereNotNull('banco_destino_id')
+            ->sum('valor');
+
+        $transfBancoParaDinheiro = (float) MovimentacaoInterna::query()
+            ->where('loja_id', $lojaId)
+            ->where('status', 'aprovada')
+            ->where('tipo', 'transferencia_banco')
+            ->whereNotNull('banco_origem_id')
+            ->whereNull('banco_destino_id')
+            ->sum('valor');
+
         // Transferencias entre lojas saindo
         $transfLojaSaida = (float) MovimentacaoInterna::query()
             ->where('loja_id', $lojaId)
@@ -245,8 +267,8 @@ class MovimentacaoInternaController extends Controller
             ->where('tipo', 'transferencia_loja')
             ->sum('valor');
 
-        $entradasCaixa = round($entradasDinheiro + $aportesDinheiro + $transfLojaEntrada, 2);
-        $saidasCaixa = round($pagamentosDinheiro + $sangriasDinheiro + $transfLojaSaida, 2);
+        $entradasCaixa = round($entradasDinheiro + $aportesDinheiro + $transfLojaEntrada + $transfBancoParaDinheiro, 2);
+        $saidasCaixa = round($pagamentosDinheiro + $sangriasDinheiro + $transfLojaSaida + $transfDinheiroParaBanco, 2);
 
         $caixaDinheiro = [
             'entradas' => $entradasCaixa,
@@ -254,11 +276,21 @@ class MovimentacaoInternaController extends Controller
             'saldo' => round($entradasCaixa - $saidasCaixa, 2),
         ];
 
-        $totalSaldo = round($saldosBancos->sum('saldo') + $caixaDinheiro['saldo'], 2);
+        $caixaBanco = [
+            'entradas' => round((float) $saldosBancos->sum('entradas'), 2),
+            'saidas' => round((float) $saldosBancos->sum('saidas'), 2),
+            'saldo' => round((float) $saldosBancos->sum('saldo'), 2),
+        ];
+
+        $totalSaldo = round($caixaBanco['saldo'] + $caixaDinheiro['saldo'], 2);
 
         return response()->json([
             'bancos' => $saldosBancos->values(),
             'caixa_dinheiro' => $caixaDinheiro,
+            'formas' => [
+                'dinheiro' => $caixaDinheiro,
+                'banco' => $caixaBanco,
+            ],
             'total' => $totalSaldo,
         ]);
     }
