@@ -239,6 +239,26 @@ class MovimentacaoInternaController extends Controller
             ->where('forma_pagamento', 'dinheiro')
             ->sum('valor_pago');
 
+        // PIX sem banco vinculado fica em uma forma separada para conciliacao.
+        $entradasPixSemBanco = (float) EntradaCaixa::query()
+            ->whereHas('caixaDiario', function ($q) use ($lojaId, $dataInicio, $dataFim) {
+                $q->where('loja_id', $lojaId)
+                    ->when($dataInicio, fn ($q2) => $q2->whereDate('data', '>=', $dataInicio))
+                    ->when($dataFim, fn ($q2) => $q2->whereDate('data', '<=', $dataFim));
+            })
+            ->where('forma_recebimento', 'pix')
+            ->whereNull('banco_id')
+            ->sum('valor');
+
+        $pagamentosPixSemBanco = (float) Pagamento::query()
+            ->where('loja_id', $lojaId)
+            ->whereIn('status', ['pago', 'parcial'])
+            ->when($dataInicio, fn ($q) => $q->whereDate('data_pagamento', '>=', $dataInicio))
+            ->when($dataFim, fn ($q) => $q->whereDate('data_pagamento', '<=', $dataFim))
+            ->where('forma_pagamento', 'pix')
+            ->whereNull('banco_id')
+            ->sum('valor_pago');
+
         $aportesDinheiro = (float) MovimentacaoInterna::query()
             ->where('loja_id', $lojaId)
             ->where('status', 'aprovada')
@@ -312,7 +332,13 @@ class MovimentacaoInternaController extends Controller
             'saldo' => round((float) $saldosBancos->sum('saldo'), 2),
         ];
 
-        $totalSaldo = round($caixaBanco['saldo'] + $caixaDinheiro['saldo'], 2);
+        $caixaPix = [
+            'entradas' => round($entradasPixSemBanco, 2),
+            'saidas' => round($pagamentosPixSemBanco, 2),
+            'saldo' => round($entradasPixSemBanco - $pagamentosPixSemBanco, 2),
+        ];
+
+        $totalSaldo = round($caixaBanco['saldo'] + $caixaDinheiro['saldo'] + $caixaPix['saldo'], 2);
 
         return response()->json([
             'bancos' => $saldosBancos->values(),
@@ -320,6 +346,7 @@ class MovimentacaoInternaController extends Controller
             'formas' => [
                 'dinheiro' => $caixaDinheiro,
                 'banco' => $caixaBanco,
+                'pix' => $caixaPix,
             ],
             'total' => $totalSaldo,
         ]);

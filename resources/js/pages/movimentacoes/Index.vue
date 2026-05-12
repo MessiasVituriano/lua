@@ -61,6 +61,22 @@
                     </div>
                 </div>
             </div>
+            <div class="col-12 col-md-6 col-lg-4" v-if="saldos.formas?.pix">
+                <div class="card p-3 h-100 border-start border-warning border-4">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="text-muted small"><i class="bi bi-qr-code"></i> PIX (sem banco)</div>
+                            <div class="fs-4 fw-bold" :class="saldos.formas.pix.saldo >= 0 ? 'text-warning' : 'text-danger'">
+                                R$ {{ fmt(saldos.formas.pix.saldo) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">
+                        Entradas: R$ {{ fmt(saldos.formas.pix.entradas) }} ·
+                        Saidas: R$ {{ fmt(saldos.formas.pix.saidas) }}
+                    </div>
+                </div>
+            </div>
             <div v-for="b in saldos.bancos" :key="b.id" class="col-12 col-md-6 col-lg-4">
                 <div class="card p-3 h-100 border-start border-info border-4" :class="{ 'opacity-75': !b.ativo }">
                     <div>
@@ -213,6 +229,7 @@ const saldos = reactive({
     formas: {
         dinheiro: { entradas: 0, saidas: 0, saldo: 0 },
         banco: { entradas: 0, saidas: 0, saldo: 0 },
+        pix: { entradas: 0, saidas: 0, saldo: 0 },
     },
     total: 0,
 });
@@ -243,6 +260,7 @@ async function loadSaldos() {
         saldos.formas = data.formas || {
             dinheiro: { entradas: 0, saidas: 0, saldo: 0 },
             banco: { entradas: 0, saidas: 0, saldo: 0 },
+            pix: { entradas: 0, saidas: 0, saldo: 0 },
         };
         saldos.total = data.total || 0;
     } catch {
