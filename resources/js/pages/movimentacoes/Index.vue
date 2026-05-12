@@ -108,7 +108,7 @@
                     <input type="date" class="form-control form-control-sm" v-model="filters.data_fim">
                 </div>
                 <div class="col-md-4 d-flex gap-2">
-                    <button class="btn btn-sm btn-lua" @click="load"><i class="bi bi-search"></i> Filtrar</button>
+                    <button class="btn btn-sm btn-lua" @click="applyFilters"><i class="bi bi-search"></i> Filtrar</button>
                     <button class="btn btn-sm btn-outline-secondary" @click="clearFilters">Limpar</button>
                 </div>
             </div>
@@ -234,7 +234,10 @@ async function load() {
 async function loadSaldos() {
     loadingSaldos.value = true;
     try {
-        const { data } = await axios.get('/movimentacoes-internas-saldos');
+        const params = {};
+        if (filters.data_inicio) params.data_inicio = filters.data_inicio;
+        if (filters.data_fim) params.data_fim = filters.data_fim;
+        const { data } = await axios.get('/movimentacoes-internas-saldos', { params });
         saldos.bancos = data.bancos || [];
         saldos.caixa_dinheiro = data.caixa_dinheiro || { entradas: 0, saidas: 0, saldo: 0 };
         saldos.formas = data.formas || {
@@ -252,6 +255,12 @@ async function loadSaldos() {
 function clearFilters() {
     Object.keys(filters).forEach(k => filters[k] = '');
     load();
+    loadSaldos();
+}
+
+function applyFilters() {
+    load();
+    loadSaldos();
 }
 
 function rowClass(m) {

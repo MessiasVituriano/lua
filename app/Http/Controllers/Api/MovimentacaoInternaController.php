@@ -151,9 +151,11 @@ class MovimentacaoInternaController extends Controller
         return response()->json($pendentes);
     }
 
-    public function saldos()
+    public function saldos(Request $request)
     {
         $lojaId = auth()->user()->loja_id;
+        $dataInicio = $request->input('data_inicio');
+        $dataFim = $request->input('data_fim');
 
         $bancos = Banco::orderBy('nome')->get(['id', 'nome', 'ativo']);
 
@@ -162,6 +164,8 @@ class MovimentacaoInternaController extends Controller
             ->where('loja_id', $lojaId)
             ->where('status', 'aprovada')
             ->whereIn('tipo', ['aporte', 'transferencia_banco'])
+            ->when($dataInicio, fn ($q) => $q->whereDate('data_movimentacao', '>=', $dataInicio))
+            ->when($dataFim, fn ($q) => $q->whereDate('data_movimentacao', '<=', $dataFim))
             ->whereNotNull('banco_destino_id')
             ->selectRaw('banco_destino_id, SUM(valor) as total')
             ->groupBy('banco_destino_id')
@@ -171,6 +175,8 @@ class MovimentacaoInternaController extends Controller
             ->where('loja_id', $lojaId)
             ->where('status', 'aprovada')
             ->whereIn('tipo', ['sangria', 'transferencia_banco'])
+            ->when($dataInicio, fn ($q) => $q->whereDate('data_movimentacao', '>=', $dataInicio))
+            ->when($dataFim, fn ($q) => $q->whereDate('data_movimentacao', '<=', $dataFim))
             ->whereNotNull('banco_origem_id')
             ->selectRaw('banco_origem_id, SUM(valor) as total')
             ->groupBy('banco_origem_id')
@@ -178,7 +184,11 @@ class MovimentacaoInternaController extends Controller
 
         // Entradas de caixa creditadas em banco (cartao, pix com banco)
         $entradasCaixaPorBanco = EntradaCaixa::query()
-            ->whereHas('caixaDiario', fn ($q) => $q->where('loja_id', $lojaId))
+            ->whereHas('caixaDiario', function ($q) use ($lojaId, $dataInicio, $dataFim) {
+                $q->where('loja_id', $lojaId)
+                    ->when($dataInicio, fn ($q2) => $q2->whereDate('data', '>=', $dataInicio))
+                    ->when($dataFim, fn ($q2) => $q2->whereDate('data', '<=', $dataFim));
+            })
             ->whereNotNull('banco_id')
             ->selectRaw('banco_id, SUM(valor) as total')
             ->groupBy('banco_id')
@@ -188,6 +198,8 @@ class MovimentacaoInternaController extends Controller
         $pagamentosPorBanco = Pagamento::query()
             ->where('loja_id', $lojaId)
             ->whereIn('status', ['pago', 'parcial'])
+            ->when($dataInicio, fn ($q) => $q->whereDate('data_pagamento', '>=', $dataInicio))
+            ->when($dataFim, fn ($q) => $q->whereDate('data_pagamento', '<=', $dataFim))
             ->whereNotNull('banco_id')
             ->selectRaw('banco_id, SUM(valor_pago) as total')
             ->groupBy('banco_id')
@@ -211,13 +223,19 @@ class MovimentacaoInternaController extends Controller
 
         // Caixa dinheiro fisico
         $entradasDinheiro = (float) EntradaCaixa::query()
-            ->whereHas('caixaDiario', fn ($q) => $q->where('loja_id', $lojaId))
+            ->whereHas('caixaDiario', function ($q) use ($lojaId, $dataInicio, $dataFim) {
+                $q->where('loja_id', $lojaId)
+                    ->when($dataInicio, fn ($q2) => $q2->whereDate('data', '>=', $dataInicio))
+                    ->when($dataFim, fn ($q2) => $q2->whereDate('data', '<=', $dataFim));
+            })
             ->where('forma_recebimento', 'dinheiro')
             ->sum('valor');
 
         $pagamentosDinheiro = (float) Pagamento::query()
             ->where('loja_id', $lojaId)
             ->whereIn('status', ['pago', 'parcial'])
+            ->when($dataInicio, fn ($q) => $q->whereDate('data_pagamento', '>=', $dataInicio))
+            ->when($dataFim, fn ($q) => $q->whereDate('data_pagamento', '<=', $dataFim))
             ->where('forma_pagamento', 'dinheiro')
             ->sum('valor_pago');
 
@@ -225,6 +243,8 @@ class MovimentacaoInternaController extends Controller
             ->where('loja_id', $lojaId)
             ->where('status', 'aprovada')
             ->where('tipo', 'aporte')
+            ->when($dataInicio, fn ($q) => $q->whereDate('data_movimentacao', '>=', $dataInicio))
+            ->when($dataFim, fn ($q) => $q->whereDate('data_movimentacao', '<=', $dataFim))
             ->whereNull('banco_destino_id')
             ->sum('valor');
 
@@ -232,6 +252,8 @@ class MovimentacaoInternaController extends Controller
             ->where('loja_id', $lojaId)
             ->where('status', 'aprovada')
             ->where('tipo', 'sangria')
+            ->when($dataInicio, fn ($q) => $q->whereDate('data_movimentacao', '>=', $dataInicio))
+            ->when($dataFim, fn ($q) => $q->whereDate('data_movimentacao', '<=', $dataFim))
             ->whereNull('banco_origem_id')
             ->sum('valor');
 
@@ -242,6 +264,8 @@ class MovimentacaoInternaController extends Controller
             ->where('loja_id', $lojaId)
             ->where('status', 'aprovada')
             ->where('tipo', 'transferencia_banco')
+            ->when($dataInicio, fn ($q) => $q->whereDate('data_movimentacao', '>=', $dataInicio))
+            ->when($dataFim, fn ($q) => $q->whereDate('data_movimentacao', '<=', $dataFim))
             ->whereNull('banco_origem_id')
             ->whereNotNull('banco_destino_id')
             ->sum('valor');
@@ -250,6 +274,8 @@ class MovimentacaoInternaController extends Controller
             ->where('loja_id', $lojaId)
             ->where('status', 'aprovada')
             ->where('tipo', 'transferencia_banco')
+            ->when($dataInicio, fn ($q) => $q->whereDate('data_movimentacao', '>=', $dataInicio))
+            ->when($dataFim, fn ($q) => $q->whereDate('data_movimentacao', '<=', $dataFim))
             ->whereNotNull('banco_origem_id')
             ->whereNull('banco_destino_id')
             ->sum('valor');
@@ -259,12 +285,16 @@ class MovimentacaoInternaController extends Controller
             ->where('loja_id', $lojaId)
             ->where('status', 'aprovada')
             ->where('tipo', 'transferencia_loja')
+            ->when($dataInicio, fn ($q) => $q->whereDate('data_movimentacao', '>=', $dataInicio))
+            ->when($dataFim, fn ($q) => $q->whereDate('data_movimentacao', '<=', $dataFim))
             ->sum('valor');
 
         $transfLojaEntrada = (float) MovimentacaoInterna::query()
             ->where('loja_destino_id', $lojaId)
             ->where('status', 'aprovada')
             ->where('tipo', 'transferencia_loja')
+            ->when($dataInicio, fn ($q) => $q->whereDate('data_movimentacao', '>=', $dataInicio))
+            ->when($dataFim, fn ($q) => $q->whereDate('data_movimentacao', '<=', $dataFim))
             ->sum('valor');
 
         $entradasCaixa = round($entradasDinheiro + $aportesDinheiro + $transfLojaEntrada + $transfBancoParaDinheiro, 2);
