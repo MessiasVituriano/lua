@@ -32,6 +32,7 @@ class Produto extends Model
 
     public const CATEGORIAS = [
         'racao' => 'Ração',
+        'racao_humida' => 'Ração Úmida',
         'medicamento' => 'Medicamento',
         'acessorio' => 'Acessório',
         'higiene' => 'Higiene',
