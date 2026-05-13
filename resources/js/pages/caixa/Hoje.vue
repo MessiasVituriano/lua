@@ -604,7 +604,7 @@ function petById(id) {
 }
 
 function itemBase() {
-    const petPadrao = petById(petSelecionadoId.value) || petsClienteSelecionado.value[0] || null;
+    const petPadrao = petById(petSelecionadoId.value) || null;
 
     return {
         produto_id: null,
@@ -616,7 +616,7 @@ function itemBase() {
         peso_gramas: null,
         perfil_pet_tipo: resolverPerfilAutomaticoPorPet(petPadrao),
         pet_id: petPadrao?.id || null,
-        cliente_id: clienteSelecionado.value?.id || petPadrao?.cliente_id || null,
+        cliente_id: clienteSelecionado.value?.id || null,
     };
 }
 
@@ -636,13 +636,13 @@ function removerItem(idx) {
 }
 
 function aplicarPetPadraoNosItens() {
-    const petPadrao = petById(petSelecionadoId.value) || petsClienteSelecionado.value[0] || null;
+    const petPadrao = petById(petSelecionadoId.value) || null;
     form.itens.forEach(item => {
         if (!item.cliente_id && clienteSelecionado.value?.id) {
             item.cliente_id = clienteSelecionado.value.id;
         }
-        if (!item.pet_id) {
-            item.pet_id = petPadrao?.id || null;
+        if (!item.pet_id && petPadrao?.id) {
+            item.pet_id = petPadrao.id;
         }
         if (!item.perfil_pet_tipo || item.perfil_pet_tipo === 'outros') {
             item.perfil_pet_tipo = resolverPerfilAutomaticoPorPet(petPadrao);
@@ -652,8 +652,7 @@ function aplicarPetPadraoNosItens() {
 
 function onClienteChange() {
     clienteBusca.value = formatarClienteLabel(clienteSelecionado.value);
-    const primeiroPet = petsClienteSelecionado.value[0] || null;
-    petSelecionadoId.value = primeiroPet?.id || null;
+    petSelecionadoId.value = null;
     onPetSelecionadoChange();
     aplicarPetPadraoNosItens();
 }
@@ -856,7 +855,7 @@ function recalcularSubtotal(item) {
 }
 
 function adicionarItemRapidoRacao(produto) {
-    const petPadrao = petById(petSelecionadoId.value) || petsClienteSelecionado.value[0] || null;
+    const petPadrao = petById(petSelecionadoId.value) || null;
     const item = {
         ...itemBase(),
         produto_id: produto.id,
@@ -866,7 +865,7 @@ function adicionarItemRapidoRacao(produto) {
         peso_gramas: null,
         perfil_pet_tipo: resolverPerfilAutomaticoPorPet(petPadrao) || 'outros',
         pet_id: petPadrao?.id || null,
-        cliente_id: clienteSelecionado.value?.id || petPadrao?.cliente_id || null,
+        cliente_id: clienteSelecionado.value?.id || null,
     };
     recalcularSubtotal(item);
     form.itens.push(item);
