@@ -1213,17 +1213,8 @@ async function loadClientesComPets() {
         const { data } = await axios.get('/caixa/clientes-com-pets');
         clientesComPets.value = data || [];
 
-        if (!clienteSelecionadoId.value && clientesComPets.value.length) {
-            clienteSelecionadoId.value = clientesComPets.value[0].id;
-        }
-
         if (clienteSelecionadoId.value) {
             clienteBusca.value = formatarClienteLabel(clienteSelecionado.value);
-        }
-
-        const pets = petsClienteSelecionado.value;
-        if ((!petSelecionadoId.value || !pets.find(p => Number(p.id) === Number(petSelecionadoId.value))) && pets.length) {
-            petSelecionadoId.value = pets[0].id;
         }
     } catch {
         clientesComPets.value = [];
