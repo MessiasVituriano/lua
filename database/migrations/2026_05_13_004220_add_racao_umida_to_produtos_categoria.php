@@ -14,7 +14,7 @@ return new class extends Migration
     {
         if (DB::getDriverName() === 'pgsql') {
             DB::statement("ALTER TABLE produtos DROP CONSTRAINT IF EXISTS produtos_categoria_check");
-            DB::statement("ALTER TABLE produtos ADD CONSTRAINT produtos_categoria_check CHECK (categoria IN ('racao', 'racao_humida', 'medicamento', 'acessorio', 'higiene', 'petisco'))");
+            DB::statement("ALTER TABLE produtos ADD CONSTRAINT produtos_categoria_check CHECK (categoria IN ('racao', 'racao_umida', 'medicamento', 'acessorio', 'higiene', 'petisco'))");
         }
     }
 

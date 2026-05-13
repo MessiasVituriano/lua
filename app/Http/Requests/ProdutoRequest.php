@@ -17,7 +17,7 @@ class ProdutoRequest extends FormRequest
         return [
             'fornecedor_id' => ['nullable', 'exists:fornecedores,id'],
             'nome' => ['required', 'string', 'max:255'],
-            'categoria' => ['required', Rule::in(['racao', 'racao_humida', 'medicamento', 'acessorio', 'higiene', 'petisco'])],
+            'categoria' => ['required', Rule::in(['racao', 'racao_umida', 'medicamento', 'acessorio', 'higiene', 'petisco'])],
             'valor_custo' => ['required', 'numeric', 'min:0.01'],
             'margem' => ['required', 'numeric', 'min:0'],
             'estoque_min' => ['nullable', 'integer', 'min:0'],
