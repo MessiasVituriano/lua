@@ -124,7 +124,7 @@ const produto = ref(null);
 const movimentacoes = ref([]);
 const movForm = reactive({ tipo: 'entrada', quantidade: '', motivo: '' });
 const movLoading = ref(false);
-const categorias = { racao: 'Ração', medicamento: 'Medicamento', acessorio: 'Acessório', higiene: 'Higiene', petisco: 'Petisco' };
+const categorias = { racao: 'Ração', racao_umida: 'Ração Úmida', medicamento: 'Medicamento', acessorio: 'Acessório', higiene: 'Higiene', petisco: 'Petisco' };
 const estoqueAlert = computed(() => produto.value && produto.value.estoque_min !== null && produto.value.estoque_atual <= produto.value.estoque_min);
 
 async function loadProduto() {

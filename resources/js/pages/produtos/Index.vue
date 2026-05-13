@@ -103,7 +103,7 @@ const isAdmin = computed(() => auth.user?.role === 'admin');
 
 const produtos = ref([]);
 const fornecedores = ref([]);
-const categorias = { racao: 'Ração', medicamento: 'Medicamento', acessorio: 'Acessório', higiene: 'Higiene', petisco: 'Petisco' };
+const categorias = { racao: 'Ração', racao_umida: 'Ração Úmida', medicamento: 'Medicamento', acessorio: 'Acessório', higiene: 'Higiene', petisco: 'Petisco' };
 const filters = reactive({ busca: '', categoria: '', fornecedor_id: '', estoque_baixo: false });
 
 async function load() {
