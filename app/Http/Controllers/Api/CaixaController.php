@@ -97,7 +97,8 @@ class CaixaController extends Controller
         $forma = $dados['forma_recebimento'];
         $ehCartao = in_array($forma, ['cartao_debito', 'cartao_credito']);
 
-        $entrada = DB::transaction(function () use ($caixa, $dados, $forma, $ehCartao, $totalItens, $itensPayload, $desconto) {
+        $alertas = [];
+        $entrada = DB::transaction(function () use ($caixa, $dados, $forma, $ehCartao, $totalItens, $itensPayload, $desconto, &$alertas) {
             if ($ehCartao) {
                 $lojaId = $caixa->loja_id;
 
@@ -177,7 +178,7 @@ class CaixaController extends Controller
             }
 
             if ($itensPayload->isNotEmpty()) {
-                $this->persistirItens($entrada, $itensPayload, $caixa->data);
+                $alertas = $this->persistirItens($entrada, $itensPayload, $caixa->data);
             }
 
             $caixa->recalcular();
@@ -185,7 +186,15 @@ class CaixaController extends Controller
             return $entrada;
         });
 
-        return response()->json($entrada->load(['banco', 'bandeira', 'planoMaquininha', 'itens.produto', 'itens.pet.cliente', 'itens.cliente']), 201);
+        $response = [
+            'entrada' => $entrada->load(['banco', 'bandeira', 'planoMaquininha', 'itens.produto', 'itens.pet.cliente', 'itens.cliente']),
+        ];
+        
+        if (!empty($alertas)) {
+            $response['alertas'] = $alertas;
+        }
+
+        return response()->json($response, 201);
     }
 
     public function removerEntrada(CaixaDiario $caixa, EntradaCaixa $entrada)
@@ -473,9 +482,10 @@ class CaixaController extends Controller
         return round($total, 2);
     }
 
-    private function persistirItens(EntradaCaixa $entrada, $itensPayload, $dataVenda): void
+    private function persistirItens(EntradaCaixa $entrada, $itensPayload, $dataVenda): array
     {
         $lojaId = auth()->user()->loja_id;
+        $alertas = [];
 
         $produtoIds = $itensPayload
             ->pluck('produto_id')
@@ -497,7 +507,7 @@ class CaixaController extends Controller
 
         $produtos = Produto::query()
             ->whereIn('id', $produtoIds)
-            ->get(['id', 'categoria', 'valor_venda', 'estoque_atual'])
+            ->get(['id', 'categoria', 'valor_venda', 'estoque_atual', 'nome'])
             ->keyBy('id');
 
         $pets = Pet::query()
@@ -540,10 +550,17 @@ class CaixaController extends Controller
             }
 
             if ((int) $produto->estoque_atual < $qtdeTotalSaida) {
-                throw new HttpResponseException(response()->json([
-                    'message' => 'Estoque insuficiente para o produto selecionado.',
-                    'produto_id' => $produto->id,
-                ], 422));
+                $alertas[] = [
+                    'type' => 'warning',
+                    'message' => 'Estoque insuficiente para o produto: ' . $produto->nome,
+                    'details' => [
+                        'produto_id' => $produto->id,
+                        'produto_nome' => $produto->nome,
+                        'estoque_atual' => (int) $produto->estoque_atual,
+                        'quantidade_vendida' => (int) $qtdeTotalSaida,
+                        'saldo_apos_venda' => (int) $produto->estoque_atual - (int) $qtdeTotalSaida,
+                    ],
+                ];
             }
         }
 
@@ -645,6 +662,8 @@ class CaixaController extends Controller
                 }
             }
         }
+
+        return $alertas;
     }
 
     private function resolverQuantidadeSaidaParaEstoque(Produto $produto, array $item): int
