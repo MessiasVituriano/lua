@@ -207,12 +207,13 @@ let modalInstance = null;
 async function load() {
     const params = {};
     Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
+    params.sem_paginacao = 1;
     const [pgRes, alRes] = await Promise.all([
         axios.get('/pagamentos', { params }),
         axios.get('/pagamentos-alertas'),
     ]);
-    pagamentos.value = pgRes.data.data;
-    totais.value = pgRes.data.totais || { total_geral: 0, total_pago: 0, total_pendente: 0, count: 0 };
+    pagamentos.value = pgRes.data?.data || [];
+    totais.value = pgRes.data?.totais || { total_geral: 0, total_pago: 0, total_pendente: 0, count: 0 };
     alertas.value = alRes.data;
 }
 

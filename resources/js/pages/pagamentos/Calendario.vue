@@ -261,7 +261,7 @@ async function load() {
     const dataFim = fmtIso(ano.value, mes.value + 1, 0);
     try {
         const { data } = await axios.get('/pagamentos', {
-            params: { data_inicio: dataInicio, data_fim: dataFim, per_page: 200 },
+            params: { data_inicio: dataInicio, data_fim: dataFim, sem_paginacao: 1 },
         });
         pagamentos.value = data.data;
     } catch {} finally { loading.value = false; }

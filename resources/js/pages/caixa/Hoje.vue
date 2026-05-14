@@ -296,7 +296,7 @@
                                     <input v-else type="hidden" v-model.number="item.quantidade">
                                     <div class="col-4">
                                         <label class="form-label small mb-1">Preco Unit.</label>
-                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" v-model.number="item.preco_unitario" @input="recalcularSubtotal(item)">
+                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" v-model.number="item.preco_unitario" @input="onPrecoUnitarioInput(item, $event.target.value)">
                                     </div>
                                     <div v-if="itemEhRacao(item)" class="col-4">
                                         <label class="form-label small mb-1">Peso (kg)</label>
@@ -305,6 +305,10 @@
                                     <div v-else class="col-4">
                                         <label class="form-label small mb-1">Tipo</label>
                                         <input type="text" class="form-control form-control-sm" value="Venda por unidade" disabled>
+                                    </div>
+                                    <div v-if="itemEhRacao(item)" class="col-4">
+                                        <label class="form-label small mb-1">Valor R$</label>
+                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" :value="item.subtotal || ''" @input="onValorInput(item, $event.target.value)" placeholder="Ex: 50,00">
                                     </div>
                                     <div class="col-6">
                                         <label class="form-label small mb-1">Perfil (auto)</label>
@@ -806,6 +810,8 @@ function onItemProdutoChange(item) {
 
     if (ehRacao) {
         item.quantidade = 1;
+        item.peso_gramas = null;
+        item.subtotal = 0;
     }
 
     // Produtos nao-racao (ex.: medicamento) nao usam peso em kg.
@@ -827,19 +833,98 @@ function pesoKgFromGramas(g) {
     return Math.round((n / 1000) * 1000) / 1000;
 }
 
-function onPesoKgInput(item, raw) {
+function parseDecimalInput(raw) {
     const norm = String(raw ?? '').replace(',', '.').trim();
-    if (norm === '') {
-        item.peso_gramas = null;
-        recalcularSubtotal(item);
+    if (norm === '') return null;
+    const parsed = parseFloat(norm);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
+function recalcularRacaoPorPeso(item) {
+    const pu = parseFloat(item.preco_unitario || 0);
+    const pesoGramas = Number(item.peso_gramas || 0);
+
+    if (pu <= 0 || pesoGramas <= 0) {
+        item.subtotal = 0;
         return;
     }
-    const kg = parseFloat(norm);
-    if (!Number.isFinite(kg) || kg <= 0) {
+
+    item.subtotal = Math.round((pesoGramas / 1000) * pu * 100) / 100;
+}
+
+function recalcularRacaoPorValor(item) {
+    const pu = parseFloat(item.preco_unitario || 0);
+    const valor = parseFloat(item.subtotal || 0);
+
+    if (pu <= 0 || valor <= 0) {
         item.peso_gramas = null;
+        if (valor <= 0) item.subtotal = 0;
+        return;
+    }
+
+    item.peso_gramas = Math.round((valor / pu) * 1000);
+}
+
+function onPesoKgInput(item, raw) {
+    const kg = parseDecimalInput(raw);
+    if (kg === null) {
+        item.peso_gramas = null;
+        item.subtotal = 0;
+        return;
+    }
+
+    if (kg <= 0) {
+        item.peso_gramas = null;
+        item.subtotal = 0;
     } else {
         item.peso_gramas = Math.round(kg * 1000);
+        recalcularRacaoPorPeso(item);
     }
+}
+
+function onValorInput(item, raw) {
+    const valor = parseDecimalInput(raw);
+    if (valor === null) {
+        item.subtotal = 0;
+        item.peso_gramas = null;
+        return;
+    }
+
+    if (valor < 0) {
+        return;
+    }
+
+    item.subtotal = Math.round(valor * 100) / 100;
+
+    if (itemEhRacao(item)) {
+        recalcularRacaoPorValor(item);
+    }
+}
+
+function onPrecoUnitarioInput(item, raw) {
+    const preco = parseDecimalInput(raw);
+    if (preco === null || preco < 0) {
+        item.preco_unitario = null;
+        item.subtotal = 0;
+        item.peso_gramas = null;
+        return;
+    }
+
+    item.preco_unitario = Math.round(preco * 100) / 100;
+
+    if (itemEhRacao(item)) {
+        if (Number(item.peso_gramas) > 0) {
+            recalcularRacaoPorPeso(item);
+            return;
+        }
+        if (Number(item.subtotal) > 0) {
+            recalcularRacaoPorValor(item);
+            return;
+        }
+        item.subtotal = 0;
+        return;
+    }
+
     recalcularSubtotal(item);
 }
 

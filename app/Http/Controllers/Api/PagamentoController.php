@@ -43,6 +43,7 @@ class PagamentoController extends Controller
             ->where('data_vencimento', '<', Carbon::today())
             ->update(['status' => 'atrasado']);
 
+        $semPaginacao = $request->boolean('sem_paginacao');
         $perPage = min((int) $request->input('per_page', 20), 200);
 
         $base = (clone $query);
@@ -55,6 +56,19 @@ class PagamentoController extends Controller
             'total_pendente' => $totalGeral - $totalPago,
             'count' => (clone $base)->count(),
         ];
+
+        if ($semPaginacao) {
+            $lista = $query->orderBy('data_vencimento')->get();
+
+            return response()->json([
+                'data' => $lista,
+                'totais' => $totais,
+                'current_page' => 1,
+                'last_page' => 1,
+                'per_page' => $lista->count(),
+                'total' => $lista->count(),
+            ]);
+        }
 
         $paginated = $query->orderBy('data_vencimento')->paginate($perPage)->toArray();
         $paginated['totais'] = $totais;
