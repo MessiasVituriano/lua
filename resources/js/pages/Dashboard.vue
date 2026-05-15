@@ -117,10 +117,13 @@
                 </div>
 
                 <div class="row-split">
-                    <div class="card meta-summary">
+                    <div class="card meta-summary" :class="[metaStatusClass(metaVenda?.percentual_atingido), metaBorderClass(metaVenda?.percentual_atingido)]">
                         <div class="section-header-inline mb-2">
-                            <h4 class="section-title">Meta de venda</h4>
-                            <span class="badge bg-primary">{{ metaVenda?.percentual_atingido || 0 }}%</span>
+                            <h4 class="section-title">
+                                Meta de venda
+                                <span v-if="(metaVenda?.percentual_atingido || 0) >= 100" class="ms-1">🏆</span>
+                            </h4>
+                            <span class="badge" :class="metaBadgeClass(metaVenda?.percentual_atingido)">{{ metaVenda?.percentual_atingido || 0 }}%</span>
                         </div>
                         <div class="meta-stats">
                             <div><span>Realizado</span><strong>R$ {{ fmt(metaVenda?.valor_realizado) }}</strong></div>
@@ -129,16 +132,23 @@
                             <div><span>Média por dia</span><strong>R$ {{ fmt(metaVenda?.media_necessaria_dia) }}</strong></div>
                         </div>
                         <div class="progress goal-progress">
-                            <div class="progress-bar bg-primary" :style="{ width: `${Math.min(metaVenda?.percentual_atingido || 0, 100)}%` }"></div>
+                            <div
+                                class="progress-bar"
+                                :class="metaBarClass(metaVenda?.percentual_atingido)"
+                                :style="metaBarStyle(metaVenda?.percentual_atingido, Math.min(metaVenda?.percentual_atingido || 0, 100))"
+                            ></div>
                         </div>
                         <div class="chart-wrap small mt-3">
                             <Bar v-if="metaChartReady && metaVendaChartData.labels.length" :data="metaVendaChartData" :options="metaChartOptions" />
                         </div>
                     </div>
-                    <div class="card meta-summary">
+                    <div class="card meta-summary" :class="metaStatusClass(metaSaldo?.percentual_atingido)">
                         <div class="section-header-inline mb-2">
-                            <h4 class="section-title">Meta por saldo</h4>
-                            <span class="badge bg-success">{{ metaSaldo?.percentual_atingido || 0 }}%</span>
+                            <h4 class="section-title">
+                                Meta por saldo
+                                <span v-if="(metaSaldo?.percentual_atingido || 0) >= 100" class="ms-1">🏆</span>
+                            </h4>
+                            <span class="badge" :class="metaBadgeClass(metaSaldo?.percentual_atingido)">{{ metaSaldo?.percentual_atingido || 0 }}%</span>
                         </div>
                         <div class="meta-stats">
                             <div><span>Realizado</span><strong>R$ {{ fmt(metaSaldo?.valor_realizado) }}</strong></div>
@@ -147,7 +157,11 @@
                             <div><span>Média por dia</span><strong>R$ {{ fmt(metaSaldo?.media_necessaria_dia) }}</strong></div>
                         </div>
                         <div class="progress goal-progress">
-                            <div class="progress-bar bg-success" :style="{ width: `${Math.min(metaSaldo?.percentual_atingido || 0, 100)}%` }"></div>
+                            <div
+                                class="progress-bar"
+                                :class="metaBarClass(metaSaldo?.percentual_atingido)"
+                                :style="metaBarStyle(metaSaldo?.percentual_atingido, Math.min(metaSaldo?.percentual_atingido || 0, 100))"
+                            ></div>
                         </div>
                         <div class="chart-wrap small mt-3">
                             <Bar v-if="metaChartReady && metaSaldoChartData.labels.length" :data="metaSaldoChartData" :options="metaChartOptions" />
@@ -837,6 +851,45 @@ const pieOptions = computed(() => ({
 const metaVenda = computed(() => d.value?.metas?.venda || null);
 const metaSaldo = computed(() => d.value?.metas?.saldo || null);
 
+function metaBarClass(pct) {
+    const p = pct || 0;
+    if (p >= 100) return 'meta-bar-green';
+    if (p >= 90)  return 'meta-bar-blue';
+    if (p >= 50)  return 'meta-bar-orange';
+    return 'meta-bar-red';
+}
+
+function metaBadgeClass(pct) {
+    const p = pct || 0;
+    if (p >= 100) return 'meta-badge-green';
+    if (p >= 90)  return 'meta-badge-blue';
+    if (p >= 50)  return 'meta-badge-orange';
+    return 'meta-badge-red';
+}
+
+function metaStatusClass(pct) {
+    return (pct || 0) >= 100 ? 'meta-batida' : '';
+}
+
+function metaBorderClass(pct) {
+    const p = pct || 0;
+    if (p >= 100) return 'meta-border-green';
+    if (p >= 90) return 'meta-border-blue';
+    if (p >= 50) return 'meta-border-orange';
+    return 'meta-border-red';
+}
+
+function metaBarStyle(pct, width) {
+    const p = pct || 0;
+    const color = p >= 100 ? '#16a34a' : p >= 90 ? '#2563eb' : p >= 50 ? '#ea580c' : '#dc2626';
+
+    return {
+        width: `${width}%`,
+        backgroundColor: color,
+        height: '16px',
+    };
+}
+
 const mesesAbrev = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
 function agruparMetaDias(dias, campo) {
@@ -1254,13 +1307,33 @@ onMounted(load);
     font-weight: 600;
 }
 .goal-progress {
-    height: 10px;
+    height: 16px;
     background: var(--lua-surface-muted);
     border-radius: 999px;
     overflow: hidden;
 }
 .goal-progress .progress-bar {
     border-radius: 999px;
+}
+
+.meta-bar-red { background-color: #dc2626 !important; }
+.meta-bar-orange { background-color: #ea580c !important; }
+.meta-bar-blue { background-color: #2563eb !important; }
+.meta-bar-green { background-color: #16a34a !important; }
+
+.meta-badge-red { background-color: #dc2626; color: #fff; }
+.meta-badge-orange { background-color: #ea580c; color: #fff; }
+.meta-badge-blue { background-color: #2563eb; color: #fff; }
+.meta-badge-green { background-color: #16a34a; color: #fff; }
+
+.meta-border-red { border-color: #dc2626 !important; box-shadow: 0 0 0 1px #dc262633; }
+.meta-border-orange { border-color: #ea580c !important; box-shadow: 0 0 0 1px #ea580c33; }
+.meta-border-blue { border-color: #2563eb !important; box-shadow: 0 0 0 1px #2563eb33; }
+.meta-border-green { border-color: #16a34a !important; box-shadow: 0 0 0 1px #16a34a33; }
+
+.meta-batida {
+    border-color: #16a34a !important;
+    box-shadow: 0 0 0 1.5px #16a34a40;
 }
 
 @media (max-width: 1100px) {

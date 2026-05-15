@@ -157,7 +157,7 @@ class MetaService
 
             $valorMeta = (float) $tipoMetas->sum('valor_meta');
             $valorRealizado = (float) $tipoMetas->sum('valor_realizado');
-            $valorRestante = round($valorMeta - $valorRealizado, 2);
+            $valorRestante = max(0.0, round($valorMeta - $valorRealizado, 2));
             $percentual = $valorMeta > 0 ? round(($valorRealizado / $valorMeta) * 100, 2) : 0.0;
             $diasFuncionamento = (int) $tipoMetas->sum('dias_funcionamento');
             $diasRestantes = (int) $tipoMetas->sum('dias_restantes');
@@ -329,7 +329,7 @@ class MetaService
 
             $valorRealizadoTotal = (float) $relacaoDiarias->sum('valor_realizado');
             $diasRestantes = $this->contarDiasRestantes($diasFuncionamento, now());
-            $valorRestante = round((float) $metaMensal->valor_meta - $valorRealizadoTotal, 2);
+            $valorRestante = max(0.0, round((float) $metaMensal->valor_meta - $valorRealizadoTotal, 2));
             $percentual = (float) $metaMensal->valor_meta > 0
                 ? round(($valorRealizadoTotal / (float) $metaMensal->valor_meta) * 100, 2)
                 : 0.0;
