@@ -52,7 +52,9 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             UsuariosIniciaisSeeder::class,
+            FluxoCaixaSeeder::class,
             DemoVendasPorAnimalSeeder::class,
+            MetasSeeder::class,
         ]);
     }
 }

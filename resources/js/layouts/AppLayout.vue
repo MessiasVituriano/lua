@@ -23,6 +23,10 @@
                     <LayoutDashboard :size="16" class="nav-icon" />
                     <span>Dashboard</span>
                 </router-link>
+                <router-link class="nav-item" active-class="active" :to="{ name: 'metas.index' }" @click="closeMobile">
+                    <Target :size="16" class="nav-icon" />
+                    <span>Metas</span>
+                </router-link>
                 <router-link class="nav-item" active-class="active" :to="{ name: 'lojas.index' }" @click="closeMobile">
                     <Store :size="16" class="nav-icon" />
                     <span>Lojas</span>
@@ -185,7 +189,7 @@ import axios from 'axios';
 import {
     Moon, Sun, Menu, X, LogOut, Store, Building2, Truck, Wallet,
     ArrowLeftRight, History, CalendarCheck, CalendarDays, Package,
-    Users, LayoutDashboard, AlertTriangle, CreditCard, Layers
+    Users, LayoutDashboard, AlertTriangle, CreditCard, Layers, Target
 } from 'lucide-vue-next';
 
 const route = useRoute();
@@ -210,6 +214,7 @@ const userInitials = computed(() => {
 
 const titles = {
     'dashboard': 'Dashboard',
+    'metas.index': 'Metas',
     'lojas.index': 'Lojas', 'lojas.create': 'Nova Loja', 'lojas.edit': 'Editar Loja', 'lojas.usuarios': 'Usuários da Loja',
     'bancos.index': 'Bancos', 'bancos.create': 'Novo Banco', 'bancos.edit': 'Editar Banco',
     'bandeiras.index': 'Bandeiras', 'bandeiras.create': 'Nova Bandeira', 'bandeiras.edit': 'Editar Bandeira',

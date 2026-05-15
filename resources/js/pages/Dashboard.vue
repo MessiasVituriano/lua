@@ -104,6 +104,58 @@
                 </div>
             </div>
 
+            <!-- Metas (Resumo) -->
+            <div class="card section-card meta-panel">
+                <div class="section-header">
+                    <div>
+                        <h3 class="section-title">Resumo de metas</h3>
+                        <p class="section-subtitle">Gestão completa disponível na tela de Metas</p>
+                    </div>
+                    <router-link class="btn btn-sm btn-lua" :to="{ name: 'metas.index' }">
+                        Gerenciar metas
+                    </router-link>
+                </div>
+
+                <div class="row-split">
+                    <div class="card meta-summary">
+                        <div class="section-header-inline mb-2">
+                            <h4 class="section-title">Meta de venda</h4>
+                            <span class="badge bg-primary">{{ metaVenda?.percentual_atingido || 0 }}%</span>
+                        </div>
+                        <div class="meta-stats">
+                            <div><span>Realizado</span><strong>R$ {{ fmt(metaVenda?.valor_realizado) }}</strong></div>
+                            <div><span>Meta</span><strong>R$ {{ fmt(metaVenda?.valor_meta) }}</strong></div>
+                            <div><span>Restante</span><strong>R$ {{ fmt(metaVenda?.valor_restante) }}</strong></div>
+                            <div><span>Média por dia</span><strong>R$ {{ fmt(metaVenda?.media_necessaria_dia) }}</strong></div>
+                        </div>
+                        <div class="progress goal-progress">
+                            <div class="progress-bar bg-primary" :style="{ width: `${Math.min(metaVenda?.percentual_atingido || 0, 100)}%` }"></div>
+                        </div>
+                        <div class="chart-wrap small mt-3">
+                            <Bar v-if="metaChartReady && metaVendaChartData.labels.length" :data="metaVendaChartData" :options="metaChartOptions" />
+                        </div>
+                    </div>
+                    <div class="card meta-summary">
+                        <div class="section-header-inline mb-2">
+                            <h4 class="section-title">Meta por saldo</h4>
+                            <span class="badge bg-success">{{ metaSaldo?.percentual_atingido || 0 }}%</span>
+                        </div>
+                        <div class="meta-stats">
+                            <div><span>Realizado</span><strong>R$ {{ fmt(metaSaldo?.valor_realizado) }}</strong></div>
+                            <div><span>Meta</span><strong>R$ {{ fmt(metaSaldo?.valor_meta) }}</strong></div>
+                            <div><span>Restante</span><strong>R$ {{ fmt(metaSaldo?.valor_restante) }}</strong></div>
+                            <div><span>Média por dia</span><strong>R$ {{ fmt(metaSaldo?.media_necessaria_dia) }}</strong></div>
+                        </div>
+                        <div class="progress goal-progress">
+                            <div class="progress-bar bg-success" :style="{ width: `${Math.min(metaSaldo?.percentual_atingido || 0, 100)}%` }"></div>
+                        </div>
+                        <div class="chart-wrap small mt-3">
+                            <Bar v-if="metaChartReady && metaSaldoChartData.labels.length" :data="metaSaldoChartData" :options="metaChartOptions" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Gráfico principal -->
             <div class="card section-card">
                 <div class="section-header">
@@ -383,6 +435,51 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tool
 const d = ref(null);
 const loading = ref(true);
 const barChartReady = ref(false);
+const metaChartReady = ref(false);
+
+const savingMetas = ref(false);
+const savingCalendario = ref(false);
+const savingExcecao = ref(false);
+const savingMetaDiaria = ref(false);
+const metaFeedback = ref('');
+
+const diasSemana = [
+    { value: 'segunda', label: 'Segunda' },
+    { value: 'terca', label: 'Terça' },
+    { value: 'quarta', label: 'Quarta' },
+    { value: 'quinta', label: 'Quinta' },
+    { value: 'sexta', label: 'Sexta' },
+    { value: 'sabado', label: 'Sábado' },
+    { value: 'domingo', label: 'Domingo' },
+];
+
+const metaDraft = reactive({
+    competencia: '',
+    venda: 0,
+    saldo: 0,
+});
+
+const calendarioDraft = reactive({
+    segunda: false,
+    terca: false,
+    quarta: false,
+    quinta: false,
+    sexta: false,
+    sabado: false,
+    domingo: false,
+});
+
+const excecaoDraft = reactive({
+    data: '',
+    tipo: 'fechado',
+    motivo: '',
+});
+
+const diaDraft = reactive({
+    tipo: 'venda',
+    data: '',
+    valor_meta: 0,
+});
 
 const now = new Date();
 const filters = reactive({
@@ -416,15 +513,12 @@ function setRange(range) {
     if (range === 'mes') {
         filters.data_inicio = new Date(n.getFullYear(), n.getMonth(), 1).toISOString().slice(0, 10);
         filters.data_fim = new Date(n.getFullYear(), n.getMonth() + 1, 0).toISOString().slice(0, 10);
-        filters.agrupamento = 'dia';
     } else if (range === '3meses') {
         filters.data_inicio = new Date(n.getFullYear(), n.getMonth() - 2, 1).toISOString().slice(0, 10);
         filters.data_fim = new Date(n.getFullYear(), n.getMonth() + 1, 0).toISOString().slice(0, 10);
-        filters.agrupamento = 'dia';
     } else if (range === 'ano') {
         filters.data_inicio = new Date(n.getFullYear(), 0, 1).toISOString().slice(0, 10);
         filters.data_fim = new Date(n.getFullYear(), 11, 31).toISOString().slice(0, 10);
-        filters.agrupamento = 'mes';
     }
     load();
 }
@@ -432,11 +526,33 @@ function setRange(range) {
 async function load() {
     loading.value = true;
     barChartReady.value = false;
+    metaChartReady.value = false;
     try {
         const { data } = await axios.get('/dashboard', { params: filters });
         d.value = data;
+        syncMetaState(data);
         barChartReady.value = true;
+        metaChartReady.value = true;
     } catch {} finally { loading.value = false; }
+}
+
+function syncMetaState(data) {
+    const competencia = (data?.metas?.competencia || `${filters.data_inicio.slice(0, 7)}-01`).slice(0, 7);
+    metaDraft.competencia = competencia;
+    metaDraft.venda = Number(data?.metas?.venda?.valor_meta || 0);
+    metaDraft.saldo = Number(data?.metas?.saldo?.valor_meta || 0);
+    metaFeedback.value = '';
+
+    const calendarioAtivo = new Set((data?.metas?.calendario || []).filter(item => item.ativa).map(item => item.dia_semana));
+    diasSemana.forEach((dia) => {
+        calendarioDraft[dia.value] = calendarioAtivo.has(dia.value);
+    });
+
+    diaDraft.data = data?.metas?.venda?.dias?.[0]?.data || data?.metas?.saldo?.dias?.[0]?.data || filters.data_inicio;
+    diaDraft.valor_meta = Number(data?.metas?.venda?.dias?.[0]?.valor_meta || data?.metas?.saldo?.dias?.[0]?.valor_meta || 0);
+    excecaoDraft.data = '';
+    excecaoDraft.tipo = 'fechado';
+    excecaoDraft.motivo = '';
 }
 
 const isDark = computed(() => document.documentElement.getAttribute('data-bs-theme') === 'dark');
@@ -621,7 +737,7 @@ const formaFormaOptions = computed(() => ({
 const saldoCategoriaChartData = computed(() => {
     if (!d.value) return { labels: [], datasets: [] };
     const keys = Object.keys(d.value.saidas_por_categoria);
-    const values = keys.map(k => (float = d.value.saidas_por_categoria[k], parseFloat(float)));
+    const values = keys.map(k => parseFloat(d.value.saidas_por_categoria[k] || 0));
     return {
         labels: keys.map(k => catLabels[k] || k),
         datasets: [{
@@ -714,6 +830,189 @@ const pieOptions = computed(() => ({
         },
     },
 }));
+
+const metaVenda = computed(() => d.value?.metas?.venda || null);
+const metaSaldo = computed(() => d.value?.metas?.saldo || null);
+
+const mesesAbrev = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+function agruparMetaDias(dias, campo) {
+    if (filters.agrupamento !== 'mes') return dias.map((d) => d[campo]);
+    const mapa = {};
+    for (const dia of dias) {
+        const mes = dia.data.slice(0, 7);
+        mapa[mes] = (mapa[mes] || 0) + dia[campo];
+    }
+    return Object.values(mapa);
+}
+
+function labelsMetaDias(dias) {
+    if (filters.agrupamento !== 'mes') {
+        return dias.map((dia) => {
+            const dt = new Date(dia.data + 'T12:00:00');
+            return dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        });
+    }
+    const meses = [...new Set(dias.map((d) => d.data.slice(0, 7)))].sort();
+    return meses.map((m) => {
+        const [y, mo] = m.split('-');
+        return mesesAbrev[parseInt(mo) - 1] + '/' + y.slice(2);
+    });
+}
+
+const metaChartLabels = computed(() => {
+    const source = metaVenda.value?.dias?.length ? metaVenda.value.dias : metaSaldo.value?.dias || [];
+    return labelsMetaDias(source);
+});
+
+const metaVendaChartData = computed(() => {
+    const dias = metaVenda.value?.dias || [];
+    return {
+        labels: labelsMetaDias(dias),
+        datasets: [
+            {
+                label: 'Meta de venda',
+                data: agruparMetaDias(dias, 'valor_meta'),
+                backgroundColor: '#93c5fd',
+                borderRadius: 4,
+                borderSkipped: false,
+            },
+            {
+                label: 'Venda realizada',
+                data: agruparMetaDias(dias, 'valor_realizado'),
+                backgroundColor: '#1d4ed8',
+                borderRadius: 4,
+                borderSkipped: false,
+            },
+        ],
+    };
+});
+
+const metaSaldoChartData = computed(() => {
+    const dias = metaSaldo.value?.dias || [];
+    return {
+        labels: labelsMetaDias(dias),
+        datasets: [
+            {
+                label: 'Meta por saldo',
+                data: agruparMetaDias(dias, 'valor_meta'),
+                backgroundColor: '#86efac',
+                borderRadius: 4,
+                borderSkipped: false,
+            },
+            {
+                label: 'Saldo realizado',
+                data: agruparMetaDias(dias, 'saldo_diario'),
+                backgroundColor: '#15803d',
+                borderRadius: 4,
+                borderSkipped: false,
+            },
+        ],
+    };
+});
+
+const metaChartOptions = computed(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            position: 'top',
+            align: 'end',
+            labels: { color: textColor.value, usePointStyle: true, pointStyle: 'circle', boxWidth: 6, boxHeight: 6, padding: 14, font: { size: 12 } }
+        },
+        tooltip: {
+            backgroundColor: isDark.value ? '#1e1b2d' : '#1c1917',
+            padding: 10,
+            cornerRadius: 6,
+            boxPadding: 4,
+            titleFont: { size: 12, weight: 500 },
+            bodyFont: { size: 12 },
+            callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: R$ ${Number(ctx.raw).toFixed(2).replace('.', ',')}`,
+            },
+        },
+    },
+    scales: {
+        x: { ticks: { color: textColor.value, maxRotation: 0, font: { size: 11 } }, grid: { display: false } },
+        y: {
+            ticks: {
+                color: textColor.value,
+                font: { size: 11 },
+                callback: (v) => 'R$ ' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v),
+            },
+            grid: { color: gridColor.value, drawBorder: false },
+            border: { display: false },
+        },
+    },
+}));
+
+function metaDiariaSelecionada() {
+    const metas = d.value?.metas?.[diaDraft.tipo]?.dias || [];
+    return metas.find((dia) => dia.data === diaDraft.data) || null;
+}
+
+async function salvarMetas() {
+    if (!metaDraft.competencia) return;
+    savingMetas.value = true;
+    try {
+        const competencia = `${metaDraft.competencia}-01`;
+        await axios.post('/metas', { tipo: 'venda', competencia, valor_meta: metaDraft.venda });
+        await axios.post('/metas', { tipo: 'saldo', competencia, valor_meta: metaDraft.saldo });
+        metaFeedback.value = 'Metas mensais atualizadas com sucesso.';
+        await load();
+    } catch (error) {
+        metaFeedback.value = error?.response?.data?.message || 'Nao foi possivel salvar as metas.';
+    } finally {
+        savingMetas.value = false;
+    }
+}
+
+async function salvarCalendario() {
+    savingCalendario.value = true;
+    try {
+        const dias_ativos = diasSemana.filter((dia) => calendarioDraft[dia.value]).map((dia) => dia.value);
+        await axios.post('/metas/calendario', { dias_ativos });
+        metaFeedback.value = 'Calendário atualizado.';
+        await load();
+    } catch (error) {
+        metaFeedback.value = error?.response?.data?.message || 'Nao foi possivel salvar o calendário.';
+    } finally {
+        savingCalendario.value = false;
+    }
+}
+
+async function salvarExcecao() {
+    if (!excecaoDraft.data) return;
+    savingExcecao.value = true;
+    try {
+        await axios.post('/metas/excecao', { ...excecaoDraft });
+        metaFeedback.value = 'Exceção salva com sucesso.';
+        await load();
+    } catch (error) {
+        metaFeedback.value = error?.response?.data?.message || 'Nao foi possivel salvar a exceção.';
+    } finally {
+        savingExcecao.value = false;
+    }
+}
+
+async function salvarMetaDiaria() {
+    const metaDiaria = metaDiariaSelecionada();
+    if (!metaDiaria) {
+        metaFeedback.value = 'Selecione uma data válida do mês atualizada pelo dashboard.';
+        return;
+    }
+
+    savingMetaDiaria.value = true;
+    try {
+        await axios.post(`/metas/dias/${metaDiaria.id}`, { valor_meta: diaDraft.valor_meta });
+        metaFeedback.value = 'Meta diária atualizada.';
+        await load();
+    } catch (error) {
+        metaFeedback.value = error?.response?.data?.message || 'Nao foi possivel salvar a meta diária.';
+    } finally {
+        savingMetaDiaria.value = false;
+    }
+}
 
 function fmt(v) { return Number(v || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.').replace(/\.(\d{2})$/, ',$1'); }
 function fmtDate(dt) {
@@ -883,6 +1182,97 @@ onMounted(load);
     gap: 0.45rem;
     font-size: 0.8125rem;
     color: var(--lua-text-soft);
+}
+
+.meta-panel { display: flex; flex-direction: column; gap: 1rem; }
+.meta-toolbar {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr 1.4fr;
+    gap: 0.75rem;
+    align-items: end;
+}
+.meta-notice { align-self: stretch; }
+.meta-config-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+.meta-config {
+    padding: 0.95rem;
+    border: 1px solid var(--lua-border);
+    border-radius: calc(var(--lua-radius) - 2px);
+    background: var(--lua-surface-muted);
+    min-width: 0;
+}
+.weekday-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem 0.75rem;
+}
+.weekday-item {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.8125rem;
+    color: var(--lua-text-soft);
+}
+.meta-mini-form {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+.meta-summary {
+    padding: 0.95rem;
+    border: 1px solid var(--lua-border);
+    border-radius: calc(var(--lua-radius) - 2px);
+    background: var(--lua-surface);
+    min-width: 0;
+}
+.meta-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+.meta-stats div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+.meta-stats span {
+    font-size: 0.725rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--lua-text-muted);
+}
+.meta-stats strong {
+    font-size: 0.95rem;
+    color: var(--lua-text);
+    font-weight: 600;
+}
+.goal-progress {
+    height: 10px;
+    background: var(--lua-surface-muted);
+    border-radius: 999px;
+    overflow: hidden;
+}
+.goal-progress .progress-bar {
+    border-radius: 999px;
+}
+
+@media (max-width: 1100px) {
+    .meta-toolbar,
+    .meta-config-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .meta-mini-form,
+    .meta-stats,
+    .weekday-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Sections */

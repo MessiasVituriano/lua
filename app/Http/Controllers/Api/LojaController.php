@@ -6,10 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LojaRequest;
 use App\Models\Loja;
 use App\Models\User;
+use App\Services\MetaService;
 use Illuminate\Http\Request;
 
 class LojaController extends Controller
 {
+    public function __construct(private readonly MetaService $metaService)
+    {
+    }
+
     public function index()
     {
         $lojas = Loja::withCount('usuarios')->orderBy('nome')->paginate(15);
@@ -78,5 +83,22 @@ class LojaController extends Controller
         }
 
         return response()->json(null, 204);
+    }
+
+    public function calendario(Loja $loja)
+    {
+        return response()->json($this->metaService->listarConfiguracao($loja->id));
+    }
+
+    public function salvarCalendario(Request $request, Loja $loja)
+    {
+        $dados = $request->validate([
+            'dias_ativos' => ['required', 'array'],
+            'dias_ativos.*' => ['in:segunda,terca,quarta,quinta,sexta,sabado,domingo'],
+        ]);
+
+        return response()->json(
+            $this->metaService->salvarCalendario($loja->id, $dados['dias_ativos'])
+        );
     }
 }

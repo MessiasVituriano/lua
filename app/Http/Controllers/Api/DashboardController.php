@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CaixaDiario;
 use App\Models\EntradaCaixa;
+use App\Models\MetaMensal;
 use App\Models\Pagamento;
 use App\Models\MovimentacaoInterna;
 use App\Models\Produto;
+use App\Services\MetaService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -186,6 +188,8 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
+        $metas = app(MetaService::class)->resumoPeriodo($lojaId, $inicio, $fim);
+
         // ── Movimentacoes internas do periodo ──
         $movInternas = MovimentacaoInterna::where('loja_id', $lojaId)
             ->whereBetween('data_movimentacao', [$inicio, $fim])
@@ -238,6 +242,17 @@ class DashboardController extends Controller
             'maiores_despesas' => $maioresDespesas,
             'pagamentos_proximos' => $pagamentosProximos,
             'produtos_estoque_baixo' => $produtosEstoqueBaixo,
+
+            // Metas
+            'metas' => [
+                'competencia' => $metas['competencia'],
+                'inicio' => $metas['inicio'],
+                'fim' => $metas['fim'],
+                'calendario' => $metas['calendario'],
+                'excecoes' => $metas['excecoes'],
+                'venda' => $metas['metas']['venda'],
+                'saldo' => $metas['metas']['saldo'],
+            ],
 
             // Movimentacoes internas
             'movimentacoes_internas' => $movInternas,

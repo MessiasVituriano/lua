@@ -33,6 +33,7 @@ import ProdutosIndex from '../pages/produtos/Index.vue';
 import ProdutosForm from '../pages/produtos/Form.vue';
 import ProdutosShow from '../pages/produtos/Show.vue';
 import AlertasMetricasIndex from '../pages/alertas-metricas/Index.vue';
+import MetasIndex from '../pages/metas/Index.vue';
 import ClientesPetsIndex from '../pages/clientes-pets/Index.vue';
 import ClientesPetsForm from '../pages/clientes-pets/Form.vue';
 
@@ -88,6 +89,7 @@ const routes = [
             { path: 'caixa/historico', name: 'caixa.historico', component: CaixaHistorico },
             { path: 'caixa/:id', name: 'caixa.show', component: CaixaShow },
             { path: 'alertas-metricas', name: 'alertas-metricas.index', component: AlertasMetricasIndex },
+            { path: 'metas', name: 'metas.index', component: MetasIndex },
             // Movimentacoes Internas
             { path: 'movimentacoes', name: 'movimentacoes.index', component: MovimentacoesIndex },
             { path: 'movimentacoes/criar', name: 'movimentacoes.create', component: MovimentacoesForm },
@@ -133,7 +135,7 @@ router.beforeEach(async (to, from, next) => {
         'planos-maquininha.index', 'planos-maquininha.create', 'planos-maquininha.edit',
         'caixa.historico', 'pagamentos.index', 'pagamentos.calendario', 'pagamentos.create', 'pagamentos.edit',
         'movimentacoes.index', 'movimentacoes.create', 'movimentacoes.edit',
-        'alertas-metricas.index',
+        'alertas-metricas.index', 'metas.index',
         'produtos.create', 'produtos.edit'];
     if (auth.user && auth.user.role !== 'admin' && adminRoutes.includes(to.name)) {
         return next({ name: 'caixa.hoje' });

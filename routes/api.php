@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\CaixaController;
 use App\Http\Controllers\Api\ClientePetController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\FornecedorController;
+use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\LojaController;
 use App\Http\Controllers\Api\PagamentoController;
 use App\Http\Controllers\Api\PlanoMaquininhaController;
@@ -73,9 +74,18 @@ Route::middleware('auth:sanctum')->group(function () {
     // === Acesso: somente admin ===
     Route::middleware('role:admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index']);
+        Route::get('metas/anual', [MetaController::class, 'anual']);
+        Route::get('metas', [MetaController::class, 'index']);
+        Route::post('metas', [MetaController::class, 'store']);
+        Route::put('metas/{meta}', [MetaController::class, 'update']);
+        Route::post('metas/{meta}/fechar', [MetaController::class, 'fechar']);
+        Route::post('metas/dias/{metaDiaria}', [MetaController::class, 'updateDia']);
+        Route::post('metas/excecao', [MetaController::class, 'excecao']);
 
         // Lojas
         Route::apiResource('lojas', LojaController::class);
+        Route::get('lojas/{loja}/calendario', [LojaController::class, 'calendario']);
+        Route::post('lojas/{loja}/calendario', [LojaController::class, 'salvarCalendario']);
         Route::get('lojas/{loja}/usuarios', [LojaController::class, 'usuarios']);
         Route::post('lojas/{loja}/vincular-usuario', [LojaController::class, 'vincularUsuario']);
         Route::delete('lojas/{loja}/desvincular-usuario/{user}', [LojaController::class, 'desvincularUsuario']);
