@@ -105,7 +105,7 @@
             </div>
 
             <!-- Metas (Resumo) -->
-            <div class="card section-card meta-panel">
+            <div v-if="isAdmin" class="card section-card meta-panel">
                 <div class="section-header">
                     <div>
                         <h3 class="section-title">Resumo de metas</h3>
@@ -420,11 +420,14 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { Bar, Doughnut } from 'vue-chartjs';
+import { useAuthStore } from '../stores/auth';
 import {
     Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement,
     Title, Tooltip, Legend
 } from 'chart.js';
 import axios from 'axios';
+const auth = useAuthStore();
+const isAdmin = computed(() => auth.user?.role === 'admin');
 import {
     TrendingUp, TrendingDown, Wallet, Bell, Trophy, ArrowLeftRight,
     AlertTriangle, Package, Search, Hourglass
