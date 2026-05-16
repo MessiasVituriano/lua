@@ -126,10 +126,10 @@
                                         <tbody>
                                             <tr v-for="dia in modalMes.vendaDias" :key="`mv-${dia.id}`">
                                                 <td>{{ fmtDate(dia.data) }}</td>
-                                                <td><input class="form-control form-control-sm" type="number" min="0" step="0.01" v-model.number="dia.valor_meta_draft" :disabled="dia.travada || dia.saving"></td>
+                                                <td><input class="form-control form-control-sm" type="number" min="0" step="0.01" v-model.number="dia.valor_meta_draft" :disabled="dia.saving"></td>
                                                 <td>R$ {{ fmtMoney(dia.valor_realizado) }}</td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-outline-primary" @click="salvarDiaModal(dia)" :disabled="dia.travada || dia.saving">
+                                                    <button class="btn btn-sm btn-outline-primary" @click="salvarDiaModal(dia)" :disabled="dia.saving">
                                                         {{ dia.saving ? '...' : 'Salvar' }}
                                                     </button>
                                                 </td>
@@ -150,10 +150,10 @@
                                         <tbody>
                                             <tr v-for="dia in modalMes.saldoDias" :key="`ms-${dia.id}`">
                                                 <td>{{ fmtDate(dia.data) }}</td>
-                                                <td><input class="form-control form-control-sm" type="number" min="0" step="0.01" v-model.number="dia.valor_meta_draft" :disabled="dia.travada || dia.saving"></td>
+                                                <td><input class="form-control form-control-sm" type="number" min="0" step="0.01" v-model.number="dia.valor_meta_draft" :disabled="dia.saving"></td>
                                                 <td>R$ {{ fmtMoney(dia.saldo_diario) }}</td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-outline-primary" @click="salvarDiaModal(dia)" :disabled="dia.travada || dia.saving">
+                                                    <button class="btn btn-sm btn-outline-primary" @click="salvarDiaModal(dia)" :disabled="dia.saving">
                                                         {{ dia.saving ? '...' : 'Salvar' }}
                                                     </button>
                                                 </td>
@@ -299,8 +299,6 @@ async function salvarMensalModal() {
 }
 
 async function salvarDiaModal(dia) {
-    if (dia.travada) return;
-
     dia.saving = true;
     try {
         await axios.post(`/metas/dias/${dia.id}`, {

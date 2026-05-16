@@ -142,7 +142,7 @@
                             <Bar v-if="metaChartReady && metaVendaChartData.labels.length" :data="metaVendaChartData" :options="metaChartOptions" />
                         </div>
                     </div>
-                    <div class="card meta-summary" :class="metaStatusClass(metaSaldo?.percentual_atingido)">
+                    <div class="card meta-summary" :class="[metaStatusClass(metaSaldo?.percentual_atingido), metaBorderClass(metaSaldo?.percentual_atingido)]">
                         <div class="section-header-inline mb-2">
                             <h4 class="section-title">
                                 Meta por saldo

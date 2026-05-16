@@ -76,7 +76,7 @@ class MetaController extends Controller
         ]);
 
         $meta->update($dados);
-        $this->metaService->sincronizarCompetencia($meta->loja_id, $meta->competencia, true);
+        $this->metaService->sincronizarCompetencia($meta->loja_id, $meta->competencia);
 
         return response()->json($meta->fresh('diarias'));
     }

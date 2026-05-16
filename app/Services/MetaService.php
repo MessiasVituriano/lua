@@ -54,8 +54,7 @@ class MetaService
                 $dadosAtualizacao
             );
 
-            $somenteFuturos = !$metaMensal->wasRecentlyCreated;
-            $this->sincronizarCompetencia($lojaId, Carbon::parse($metaMensal->competencia), $somenteFuturos);
+            $this->sincronizarCompetencia($lojaId, Carbon::parse($metaMensal->competencia));
 
             return $metaMensal->fresh(['diarias']);
         });
@@ -75,7 +74,7 @@ class MetaService
 
             $competencias = MetaMensal::where('loja_id', $lojaId)->pluck('competencia');
             foreach ($competencias as $competencia) {
-                $this->sincronizarCompetencia($lojaId, Carbon::parse($competencia), true);
+                $this->sincronizarCompetencia($lojaId, Carbon::parse($competencia));
             }
         });
 
@@ -89,23 +88,19 @@ class MetaService
             ['tipo' => $tipo, 'motivo' => $motivo]
         );
 
-        $this->sincronizarCompetencia($lojaId, Carbon::parse($excecao->data)->startOfMonth(), true);
+        $this->sincronizarCompetencia($lojaId, Carbon::parse($excecao->data)->startOfMonth());
 
         return $excecao->fresh();
     }
 
     public function atualizarMetaDiaria(MetaDiaria $metaDiaria, float $valorMeta): MetaDiaria
     {
-        if ($metaDiaria->travada) {
-            abort(422, 'Dia fechado nao pode ser editado.');
-        }
-
         $metaDiaria->update([
             'valor_meta' => $valorMeta,
             'eh_manual' => true,
         ]);
 
-        $this->sincronizarCompetencia($metaDiaria->metaMensal->loja_id, Carbon::parse($metaDiaria->metaMensal->competencia), true);
+        $this->sincronizarCompetencia($metaDiaria->metaMensal->loja_id, Carbon::parse($metaDiaria->metaMensal->competencia));
 
         return $metaDiaria->fresh();
     }
@@ -258,11 +253,10 @@ class MetaService
         ];
     }
 
-    public function sincronizarCompetencia(int $lojaId, Carbon $competencia, bool $somenteFuturos = false): void
+    public function sincronizarCompetencia(int $lojaId, Carbon $competencia): void
     {
         $inicio = $competencia->copy()->startOfMonth();
         $fim = $competencia->copy()->endOfMonth();
-        $hoje = now()->startOfDay();
 
         $calendario = $this->obterCalendarioOuPadrao($lojaId);
         $excecoes = ExcecaoFuncionamento::where('loja_id', $lojaId)
@@ -316,9 +310,8 @@ class MetaService
                 $chave = $data->toDateString();
                 $metaDiariaExistente = $diariasExistentes->get($chave);
                 $ehManual = (bool) ($metaDiariaExistente?->eh_manual ?? false);
-                $ehDiaElegivel = !$somenteFuturos || $data->greaterThanOrEqualTo($hoje);
 
-                if (!$ehManual && $ehDiaElegivel) {
+                if (!$ehManual) {
                     $diasRedistribuiveis[] = $chave;
                     continue;
                 }
