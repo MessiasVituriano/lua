@@ -42,6 +42,7 @@ class MetaController extends Controller
             'tipo' => ['required', 'in:venda,saldo'],
             'competencia' => ['required', 'date'],
             'valor_meta' => ['required', 'numeric', 'min:0'],
+            'valor_realizado_inicial' => ['nullable', 'numeric', 'min:0'],
             'observacao' => ['nullable', 'string'],
         ]);
 
@@ -50,7 +51,8 @@ class MetaController extends Controller
             $dados['tipo'],
             $dados['competencia'],
             (float) $dados['valor_meta'],
-            $dados['observacao'] ?? null
+            $dados['observacao'] ?? null,
+            isset($dados['valor_realizado_inicial']) ? (float) $dados['valor_realizado_inicial'] : null
         );
 
         return response()->json($meta->load('diarias'), 201);
@@ -68,12 +70,13 @@ class MetaController extends Controller
 
         $dados = $request->validate([
             'valor_meta' => ['required', 'numeric', 'min:0'],
+            'valor_realizado_inicial' => ['nullable', 'numeric', 'min:0'],
             'observacao' => ['nullable', 'string'],
             'status' => ['nullable', 'in:aberta,fechada'],
         ]);
 
         $meta->update($dados);
-        $this->metaService->sincronizarCompetencia($meta->loja_id, $meta->competencia);
+        $this->metaService->sincronizarCompetencia($meta->loja_id, $meta->competencia, true);
 
         return response()->json($meta->fresh('diarias'));
     }

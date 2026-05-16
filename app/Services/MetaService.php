@@ -13,23 +13,37 @@ use Illuminate\Support\Facades\DB;
 
 class MetaService
 {
-    public function upsertMetaMensal(int $lojaId, string $tipo, string $competencia, float $valorMeta, ?string $observacao = null): MetaMensal
+    public function upsertMetaMensal(
+        int $lojaId,
+        string $tipo,
+        string $competencia,
+        float $valorMeta,
+        ?string $observacao = null,
+        ?float $valorRealizadoInicial = null
+    ): MetaMensal
     {
-        return DB::transaction(function () use ($lojaId, $tipo, $competencia, $valorMeta, $observacao) {
+        return DB::transaction(function () use ($lojaId, $tipo, $competencia, $valorMeta, $observacao, $valorRealizadoInicial) {
+            $dadosAtualizacao = [
+                'valor_meta' => $valorMeta,
+                'observacao' => $observacao,
+                'status' => 'aberta',
+            ];
+
+            if ($valorRealizadoInicial !== null) {
+                $dadosAtualizacao['valor_realizado_inicial'] = $valorRealizadoInicial;
+            }
+
             $metaMensal = MetaMensal::updateOrCreate(
                 [
                     'loja_id' => $lojaId,
                     'tipo' => $tipo,
                     'competencia' => Carbon::parse($competencia)->startOfMonth()->toDateString(),
                 ],
-                [
-                    'valor_meta' => $valorMeta,
-                    'observacao' => $observacao,
-                    'status' => 'aberta',
-                ]
+                $dadosAtualizacao
             );
 
-            $this->sincronizarCompetencia($lojaId, Carbon::parse($metaMensal->competencia));
+            $somenteFuturos = !$metaMensal->wasRecentlyCreated;
+            $this->sincronizarCompetencia($lojaId, Carbon::parse($metaMensal->competencia), $somenteFuturos);
 
             return $metaMensal->fresh(['diarias']);
         });
@@ -49,7 +63,7 @@ class MetaService
 
             $competencias = MetaMensal::where('loja_id', $lojaId)->pluck('competencia');
             foreach ($competencias as $competencia) {
-                $this->sincronizarCompetencia($lojaId, Carbon::parse($competencia));
+                $this->sincronizarCompetencia($lojaId, Carbon::parse($competencia), true);
             }
         });
 
@@ -63,7 +77,7 @@ class MetaService
             ['tipo' => $tipo, 'motivo' => $motivo]
         );
 
-        $this->sincronizarCompetencia($lojaId, Carbon::parse($excecao->data)->startOfMonth());
+        $this->sincronizarCompetencia($lojaId, Carbon::parse($excecao->data)->startOfMonth(), true);
 
         return $excecao->fresh();
     }
@@ -79,7 +93,7 @@ class MetaService
             'eh_manual' => true,
         ]);
 
-        $this->sincronizarCompetencia($metaDiaria->metaMensal->loja_id, Carbon::parse($metaDiaria->metaMensal->competencia));
+        $this->sincronizarCompetencia($metaDiaria->metaMensal->loja_id, Carbon::parse($metaDiaria->metaMensal->competencia), true);
 
         return $metaDiaria->fresh();
     }
@@ -114,6 +128,7 @@ class MetaService
                     'tipo' => $tipo,
                     'competencia' => $competencia->toDateString(),
                     'valor_meta' => 0,
+                    'valor_realizado_inicial' => 0,
                     'valor_realizado' => 0,
                     'valor_restante' => 0,
                     'percentual_atingido' => 0,
@@ -171,6 +186,7 @@ class MetaService
 
             $result[$tipo] = [
                 'valor_meta' => $valorMeta,
+                'valor_realizado_inicial' => (float) $tipoMetas->sum('valor_realizado_inicial'),
                 'valor_realizado' => $valorRealizado,
                 'valor_restante' => $valorRestante,
                 'percentual_atingido' => $percentual,
@@ -230,12 +246,13 @@ class MetaService
         ];
     }
 
-    public function sincronizarCompetencia(int $lojaId, Carbon $competencia): void
+    public function sincronizarCompetencia(int $lojaId, Carbon $competencia, bool $somenteFuturos = false): void
     {
         $inicio = $competencia->copy()->startOfMonth();
         $fim = $competencia->copy()->endOfMonth();
+        $hoje = now()->startOfDay();
 
-        $calendario = CalendarioFuncionamento::where('loja_id', $lojaId)->get()->keyBy('dia_semana');
+        $calendario = $this->obterCalendarioOuPadrao($lojaId);
         $excecoes = ExcecaoFuncionamento::where('loja_id', $lojaId)
             ->whereBetween('data', [$inicio->toDateString(), $fim->toDateString()])
             ->get()
@@ -280,10 +297,26 @@ class MetaService
                 ->get()
                 ->keyBy(fn ($item) => $item->data->toDateString());
 
-            $manualTotal = (float) $diariasExistentes->where('eh_manual', true)->sum('valor_meta');
-            $diasAutomaticos = max($qtdDiasFuncionamento - $diariasExistentes->where('eh_manual', true)->count(), 0);
-            $saldoBase = $metaMensal->valor_meta - $manualTotal;
-            $valorBaseDiario = $diasAutomaticos > 0 ? round($saldoBase / $diasAutomaticos, 2) : 0.0;
+            $valorFixado = 0.0;
+            $diasRedistribuiveis = [];
+
+            foreach ($diasFuncionamento as $data) {
+                $chave = $data->toDateString();
+                $metaDiariaExistente = $diariasExistentes->get($chave);
+                $ehManual = (bool) ($metaDiariaExistente?->eh_manual ?? false);
+                $ehDiaElegivel = !$somenteFuturos || $data->greaterThanOrEqualTo($hoje);
+
+                if (!$ehManual && $ehDiaElegivel) {
+                    $diasRedistribuiveis[] = $chave;
+                    continue;
+                }
+
+                $valorFixado += (float) ($metaDiariaExistente?->valor_meta ?? 0);
+            }
+
+            $diasRedistribuiveisMap = array_fill_keys($diasRedistribuiveis, true);
+            $saldoBase = max(0.0, round((float) $metaMensal->valor_meta - $valorFixado, 2));
+            $valorBaseDiario = count($diasRedistribuiveis) > 0 ? round($saldoBase / count($diasRedistribuiveis), 2) : 0.0;
 
             foreach ($diasFuncionamento as $data) {
                 $chave = $data->toDateString();
@@ -309,8 +342,12 @@ class MetaService
                     'data' => $chave,
                 ]);
 
-                if (!$metaDiaria->exists || !$metaDiaria->eh_manual) {
+                $deveRedistribuirDia = isset($diasRedistribuiveisMap[$chave]);
+
+                if ($deveRedistribuirDia && !$metaDiaria->eh_manual) {
                     $metaDiaria->valor_meta = $valorBaseDiario;
+                } elseif (!$metaDiaria->exists) {
+                    $metaDiaria->valor_meta = 0;
                 }
 
                 $metaDiaria->valor_realizado = $valorRealizado;
@@ -327,7 +364,8 @@ class MetaService
                 ->orderBy('data')
                 ->get();
 
-            $valorRealizadoTotal = (float) $relacaoDiarias->sum('valor_realizado');
+            $valorRealizadoCaixa = (float) $relacaoDiarias->sum('valor_realizado');
+            $valorRealizadoTotal = round((float) $metaMensal->valor_realizado_inicial + $valorRealizadoCaixa, 2);
             $diasRestantes = $this->contarDiasRestantes($diasFuncionamento, now());
             $valorRestante = max(0.0, round((float) $metaMensal->valor_meta - $valorRealizadoTotal, 2));
             $percentual = (float) $metaMensal->valor_meta > 0
@@ -348,6 +386,8 @@ class MetaService
 
     public function listarConfiguracao(int $lojaId): array
     {
+        $this->obterCalendarioOuPadrao($lojaId);
+
         return [
             'calendario' => CalendarioFuncionamento::where('loja_id', $lojaId)
                 ->orderByRaw("array_position(array['segunda','terca','quarta','quinta','sexta','sabado','domingo'], dia_semana)")
@@ -356,6 +396,34 @@ class MetaService
                 ->orderByDesc('data')
                 ->get(['data', 'tipo', 'motivo']),
         ];
+    }
+
+    private function obterCalendarioOuPadrao(int $lojaId)
+    {
+        $calendario = CalendarioFuncionamento::where('loja_id', $lojaId)->get()->keyBy('dia_semana');
+
+        if ($calendario->isNotEmpty()) {
+            return $calendario;
+        }
+
+        $padrao = [
+            'segunda' => true,
+            'terca' => true,
+            'quarta' => true,
+            'quinta' => true,
+            'sexta' => true,
+            'sabado' => true,
+            'domingo' => false,
+        ];
+
+        foreach ($padrao as $diaSemana => $ativa) {
+            CalendarioFuncionamento::updateOrCreate(
+                ['loja_id' => $lojaId, 'dia_semana' => $diaSemana],
+                ['ativa' => $ativa]
+            );
+        }
+
+        return CalendarioFuncionamento::where('loja_id', $lojaId)->get()->keyBy('dia_semana');
     }
 
     private function formatarMeta(MetaMensal $metaMensal, string $tipo, int $lojaId, Carbon $competencia, Carbon $inicio, Carbon $fim): array
@@ -371,6 +439,7 @@ class MetaService
             'competencia' => $competencia->toDateString(),
             'status' => $metaMensal->status,
             'valor_meta' => (float) $metaMensal->valor_meta,
+            'valor_realizado_inicial' => (float) $metaMensal->valor_realizado_inicial,
             'valor_realizado' => (float) $metaMensal->valor_realizado,
             'valor_restante' => (float) $metaMensal->valor_restante,
             'percentual_atingido' => (float) $metaMensal->percentual_atingido,
@@ -399,6 +468,7 @@ class MetaService
             'id' => $metaMensal?->id,
             'status' => $metaMensal?->status ?? 'aberta',
             'valor_meta' => (float) ($metaMensal?->valor_meta ?? 0),
+            'valor_realizado_inicial' => (float) ($metaMensal?->valor_realizado_inicial ?? 0),
             'valor_realizado' => (float) ($metaMensal?->valor_realizado ?? 0),
             'valor_restante' => (float) ($metaMensal?->valor_restante ?? 0),
             'percentual_atingido' => (float) ($metaMensal?->percentual_atingido ?? 0),

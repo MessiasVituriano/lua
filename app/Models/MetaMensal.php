@@ -16,6 +16,7 @@ class MetaMensal extends Model
         'tipo',
         'competencia',
         'valor_meta',
+        'valor_realizado_inicial',
         'valor_realizado',
         'valor_restante',
         'percentual_atingido',
@@ -29,6 +30,7 @@ class MetaMensal extends Model
     protected $casts = [
         'competencia' => 'date',
         'valor_meta' => 'decimal:2',
+        'valor_realizado_inicial' => 'decimal:2',
         'valor_realizado' => 'decimal:2',
         'valor_restante' => 'decimal:2',
         'percentual_atingido' => 'decimal:2',

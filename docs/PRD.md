@@ -347,6 +347,8 @@ Sistema web para gerenciamento do fluxo de caixa de PetShops com suporte a multi
 - Controlar metas de venda e metas por saldo em base mensal, sempre por loja
 - Distribuir automaticamente a meta mensal entre os dias de funcionamento da loja
 - Permitir edicao manual da meta mensal e dos valores diarios, com recalculo automatico dos dias futuros
+- Permitir ajustar manualmente metas diarias especificas apos o cadastro da meta mensal
+- Permitir informar o valor ja vendido no mes para iniciar o comparativo com contexto real
 - Exibir o progresso da meta em cards, barras, graficos diarios e consolidados mensais
 
 **Conceitos do Modulo:**
@@ -369,6 +371,7 @@ Sistema web para gerenciamento do fluxo de caixa de PetShops com suporte a multi
 | tipo               | enum     | sim         | venda, saldo |
 | competencia        | date     | sim         | referencia do mes, usando o primeiro dia do mes |
 | valor_meta         | decimal  | sim         | valor total da meta no mes |
+| valor_realizado_inicial | decimal | nao      | valor ja vendido no mes no momento do cadastro da meta |
 | valor_realizado    | decimal  | auto        | soma dos valores realizados do mes |
 | valor_restante     | decimal  | auto        | valor_meta - valor_realizado |
 | percentual_atingido| decimal  | auto        | percentual de progresso da meta |
@@ -420,10 +423,14 @@ Sistema web para gerenciamento do fluxo de caixa de PetShops com suporte a multi
 - Cada mes possui duas metas independentes: meta de venda e meta por saldo
 - A meta mensal pode ser editada, mas a partir do fechamento do mes fica travada
 - A meta diaria e distribuida igualmente entre os dias de funcionamento da loja no periodo
+- Depois da distribuicao automatica, a meta diaria pode ser editada manualmente por dia
+- Ao editar uma meta diaria, o sistema recalcula apenas os dias futuros nao editados manualmente para manter o total da meta mensal
 - Se o calendario da loja for alterado, o sistema recalcula automaticamente as metas dos dias futuros
 - Dias sem funcionamento nao recebem meta diaria
 - Dias com excecao de funcionamento podem ser abertos ou fechados manualmente e entram no calculo apenas quando estiverem ativos
 - O realizado diario vem do caixa diario ja existente
+- No cadastro da meta mensal, o usuario pode informar o valor ja vendido no mes para iniciar o comparativo
+- O valor_realizado considerado no comparativo = valor_realizado_inicial + realizado apurado no caixa diario apos o cadastro
 - Na meta de venda, o realizado considera o total de entradas do caixa diario
 - Na meta por saldo, o realizado considera o saldo do caixa diario no fim do dia
 - Dias sem movimento entram com valor zero no grafico e no acumulado
@@ -446,6 +453,8 @@ Sistema web para gerenciamento do fluxo de caixa de PetShops com suporte a multi
 **Funcionalidades:**
 - [ ] Cadastro de meta mensal por loja para venda e saldo
 - [ ] Edicao da meta mensal com recalculo dos dias futuros
+- [ ] Edicao manual da meta diaria por dia apos a distribuicao automatica
+- [ ] Campo no cadastro da meta mensal para informar valor ja vendido no mes
 - [ ] Cadastro e manutencao do calendario de funcionamento por loja
 - [ ] Cadastro de excecoes por data para abertura e fechamento pontual
 - [ ] Distribuicao automatica da meta diaria conforme dias de funcionamento
@@ -458,11 +467,12 @@ Sistema web para gerenciamento do fluxo de caixa de PetShops com suporte a multi
 
 **Fluxo de Uso:**
 1. O usuario seleciona a loja e o mes de referencia
-2. O sistema exibe a meta mensal de venda e a meta por saldo
+2. O usuario cadastra a meta mensal e pode informar o valor ja vendido no mes
 3. O sistema distribui a meta diaria entre os dias de funcionamento cadastrados
-4. O realizado diario e buscado automaticamente no caixa diario
-5. O dashboard mostra os indicadores, a progress bar e os graficos diarios e mensais
-6. Ao editar o calendario ou a meta mensal, os dias futuros sao recalculados automaticamente
+4. O usuario pode ajustar manualmente metas diarias especificas
+5. O realizado diario e buscado automaticamente no caixa diario e somado ao valor realizado inicial
+6. O dashboard mostra os indicadores, a progress bar e os graficos diarios e mensais
+7. Ao editar o calendario, a meta mensal ou uma meta diaria, os dias futuros elegiveis sao recalculados automaticamente
 
 ---
 
