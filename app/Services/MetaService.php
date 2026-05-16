@@ -23,8 +23,20 @@ class MetaService
     ): MetaMensal
     {
         return DB::transaction(function () use ($lojaId, $tipo, $competencia, $valorMeta, $observacao, $valorRealizadoInicial) {
+            $competenciaCarbon = Carbon::parse($competencia)->startOfMonth();
+
+            $metaExistente = MetaMensal::where('loja_id', $lojaId)
+                ->where('tipo', $tipo)
+                ->whereDate('competencia', $competenciaCarbon->toDateString())
+                ->first();
+
+            $valorMetaCalculado = $valorMeta;
+            if (!$metaExistente && $valorMetaCalculado <= 0) {
+                $valorMetaCalculado = $this->calcularMetaBasePorRealizado($lojaId, $tipo, $competenciaCarbon);
+            }
+
             $dadosAtualizacao = [
-                'valor_meta' => $valorMeta,
+                'valor_meta' => $valorMetaCalculado,
                 'observacao' => $observacao,
                 'status' => 'aberta',
             ];
@@ -37,7 +49,7 @@ class MetaService
                 [
                     'loja_id' => $lojaId,
                     'tipo' => $tipo,
-                    'competencia' => Carbon::parse($competencia)->startOfMonth()->toDateString(),
+                    'competencia' => $competenciaCarbon->toDateString(),
                 ],
                 $dadosAtualizacao
             );
@@ -439,6 +451,9 @@ class MetaService
             'competencia' => $competencia->toDateString(),
             'status' => $metaMensal->status,
             'valor_meta' => (float) $metaMensal->valor_meta,
+            'valor_meta_sugerido' => (float) ($metaMensal->valor_meta > 0
+                ? $metaMensal->valor_meta
+                : $this->calcularMetaBasePorRealizado($lojaId, $tipo, $competencia)),
             'valor_realizado_inicial' => (float) $metaMensal->valor_realizado_inicial,
             'valor_realizado' => (float) $metaMensal->valor_realizado,
             'valor_restante' => (float) $metaMensal->valor_restante,
@@ -468,6 +483,11 @@ class MetaService
             'id' => $metaMensal?->id,
             'status' => $metaMensal?->status ?? 'aberta',
             'valor_meta' => (float) ($metaMensal?->valor_meta ?? 0),
+            'valor_meta_sugerido' => (float) (($metaMensal && $metaMensal->valor_meta > 0)
+                ? $metaMensal->valor_meta
+                : ($metaMensal
+                    ? $this->calcularMetaBasePorRealizado($metaMensal->loja_id, $metaMensal->tipo, Carbon::parse($metaMensal->competencia))
+                    : 0)),
             'valor_realizado_inicial' => (float) ($metaMensal?->valor_realizado_inicial ?? 0),
             'valor_realizado' => (float) ($metaMensal?->valor_realizado ?? 0),
             'valor_restante' => (float) ($metaMensal?->valor_restante ?? 0),
@@ -509,5 +529,25 @@ class MetaService
             6 => 'sabado',
             7 => 'domingo',
         };
+    }
+
+    private function calcularMetaBasePorRealizado(int $lojaId, string $tipo, Carbon $competencia): float
+    {
+        $inicio = $competencia->copy()->startOfMonth();
+        $fim = $competencia->copy()->endOfMonth();
+
+        $realizado = $tipo === 'venda'
+            ? (float) CaixaDiario::where('loja_id', $lojaId)
+                ->whereBetween('data', [$inicio->toDateString(), $fim->toDateString()])
+                ->sum('total_entradas')
+            : (float) CaixaDiario::where('loja_id', $lojaId)
+                ->whereBetween('data', [$inicio->toDateString(), $fim->toDateString()])
+                ->sum('saldo');
+
+        if ($realizado > 0) {
+            return round($realizado, 2);
+        }
+
+        return $tipo === 'venda' ? 30000.00 : 18000.00;
     }
 }

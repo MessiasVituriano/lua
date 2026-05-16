@@ -41,7 +41,7 @@ class MetaController extends Controller
         $dados = $request->validate([
             'tipo' => ['required', 'in:venda,saldo'],
             'competencia' => ['required', 'date'],
-            'valor_meta' => ['required', 'numeric', 'min:0'],
+            'valor_meta' => ['nullable', 'numeric', 'min:0'],
             'valor_realizado_inicial' => ['nullable', 'numeric', 'min:0'],
             'observacao' => ['nullable', 'string'],
         ]);
@@ -50,7 +50,7 @@ class MetaController extends Controller
             auth()->user()->loja_id,
             $dados['tipo'],
             $dados['competencia'],
-            (float) $dados['valor_meta'],
+            (float) ($dados['valor_meta'] ?? 0),
             $dados['observacao'] ?? null,
             isset($dados['valor_realizado_inicial']) ? (float) $dados['valor_realizado_inicial'] : null
         );

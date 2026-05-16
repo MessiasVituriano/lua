@@ -474,8 +474,6 @@ const metaDraft = reactive({
     competencia: '',
     venda: 0,
     saldo: 0,
-    venda_realizado_inicial: 0,
-    saldo_realizado_inicial: 0,
 });
 
 const calendarioDraft = reactive({
@@ -558,10 +556,8 @@ async function load() {
 function syncMetaState(data) {
     const competencia = (data?.metas?.competencia || `${filters.data_inicio.slice(0, 7)}-01`).slice(0, 7);
     metaDraft.competencia = competencia;
-    metaDraft.venda = Number(data?.metas?.venda?.valor_meta || 0);
-    metaDraft.saldo = Number(data?.metas?.saldo?.valor_meta || 0);
-    metaDraft.venda_realizado_inicial = Number(data?.metas?.venda?.valor_realizado_inicial || 0);
-    metaDraft.saldo_realizado_inicial = Number(data?.metas?.saldo?.valor_realizado_inicial || 0);
+    metaDraft.venda = Number(data?.metas?.venda?.valor_meta || data?.metas?.venda?.valor_meta_sugerido || 0);
+    metaDraft.saldo = Number(data?.metas?.saldo?.valor_meta || data?.metas?.saldo?.valor_meta_sugerido || 0);
     metaFeedback.value = '';
 
     const calendarioAtivo = new Set((data?.metas?.calendario || []).filter(item => item.ativa).map(item => item.dia_semana));
@@ -1020,13 +1016,11 @@ async function salvarMetas() {
             tipo: 'venda',
             competencia,
             valor_meta: metaDraft.venda,
-            valor_realizado_inicial: metaDraft.venda_realizado_inicial,
         });
         await axios.post('/metas', {
             tipo: 'saldo',
             competencia,
             valor_meta: metaDraft.saldo,
-            valor_realizado_inicial: metaDraft.saldo_realizado_inicial,
         });
         metaFeedback.value = 'Metas mensais atualizadas com sucesso.';
         await load();

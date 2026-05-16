@@ -108,14 +108,6 @@
                                 <label class="filter-label">Meta mensal por saldo</label>
                                 <input class="form-control form-control-sm" type="number" min="0" step="0.01" v-model.number="modalMes.saldoMeta">
                             </div>
-                            <div>
-                                <label class="filter-label">Ja vendido (venda)</label>
-                                <input class="form-control form-control-sm" type="number" min="0" step="0.01" v-model.number="modalMes.vendaRealizadoInicial">
-                            </div>
-                            <div>
-                                <label class="filter-label">Ja vendido (saldo)</label>
-                                <input class="form-control form-control-sm" type="number" min="0" step="0.01" v-model.number="modalMes.saldoRealizadoInicial">
-                            </div>
                             <div class="d-flex align-items-end">
                                 <button class="btn btn-sm btn-lua w-100" @click="salvarMensalModal" :disabled="savingMensalModal || loadingModal">
                                     {{ savingMensalModal ? 'Salvando...' : 'Salvar metas mensais' }}
@@ -212,8 +204,6 @@ const modalMes = reactive({
     competencia: '',
     vendaMeta: 0,
     saldoMeta: 0,
-    vendaRealizadoInicial: 0,
-    saldoRealizadoInicial: 0,
     vendaDias: [],
     saldoDias: [],
 });
@@ -263,10 +253,8 @@ async function carregarCompetencia(competencia) {
         const { data } = await axios.get('/metas', { params: { competencia } });
 
         modalMes.competencia = data.competencia;
-        modalMes.vendaMeta = Number(data.metas?.venda?.valor_meta || 0);
-        modalMes.saldoMeta = Number(data.metas?.saldo?.valor_meta || 0);
-        modalMes.vendaRealizadoInicial = Number(data.metas?.venda?.valor_realizado_inicial || 0);
-        modalMes.saldoRealizadoInicial = Number(data.metas?.saldo?.valor_realizado_inicial || 0);
+        modalMes.vendaMeta = Number(data.metas?.venda?.valor_meta || data.metas?.venda?.valor_meta_sugerido || 0);
+        modalMes.saldoMeta = Number(data.metas?.saldo?.valor_meta || data.metas?.saldo?.valor_meta_sugerido || 0);
         modalMes.vendaDias = prepararDias(data.metas?.venda?.dias || []);
         modalMes.saldoDias = prepararDias(data.metas?.saldo?.dias || []);
         feedback.value = '';
@@ -294,13 +282,11 @@ async function salvarMensalModal() {
             tipo: 'venda',
             competencia: modalMes.competencia,
             valor_meta: Number(modalMes.vendaMeta || 0),
-            valor_realizado_inicial: Number(modalMes.vendaRealizadoInicial || 0),
         });
         await axios.post('/metas', {
             tipo: 'saldo',
             competencia: modalMes.competencia,
             valor_meta: Number(modalMes.saldoMeta || 0),
-            valor_realizado_inicial: Number(modalMes.saldoRealizadoInicial || 0),
         });
 
         await Promise.all([carregarCompetencia(modalMes.competencia), loadAnual()]);
@@ -394,7 +380,7 @@ onMounted(loadTela);
 
 .modal-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 220px;
+    grid-template-columns: 1fr 1fr 220px;
     gap: 0.75rem;
 }
 
