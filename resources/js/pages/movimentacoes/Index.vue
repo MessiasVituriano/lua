@@ -163,10 +163,10 @@
                                         <i class="bi bi-x-lg"></i>
                                     </button>
                                 </template>
-                                <router-link v-if="m.status === 'solicitada'" :to="{ name: 'movimentacoes.edit', params: { id: m.id } }" class="btn btn-sm btn-outline-primary me-1" title="Editar">
+                                <router-link :to="{ name: 'movimentacoes.edit', params: { id: m.id } }" class="btn btn-sm btn-outline-primary me-1" title="Editar">
                                     <i class="bi bi-pencil"></i>
                                 </router-link>
-                                <button v-if="m.status !== 'aprovada'" class="btn btn-sm btn-outline-danger" @click="destroy(m)" title="Remover">
+                                <button class="btn btn-sm btn-outline-danger" @click="destroy(m)" title="Remover">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>

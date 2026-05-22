@@ -78,10 +78,6 @@ class MovimentacaoInternaController extends Controller
 
     public function update(MovimentacaoInternaRequest $request, MovimentacaoInterna $movimentacoes_interna)
     {
-        if ($movimentacoes_interna->status !== 'solicitada') {
-            return response()->json(['message' => 'Somente movimentacoes com status "solicitada" podem ser editadas.'], 422);
-        }
-
         $movimentacoes_interna->update($request->validated());
 
         return response()->json(
@@ -91,10 +87,6 @@ class MovimentacaoInternaController extends Controller
 
     public function destroy(MovimentacaoInterna $movimentacoes_interna)
     {
-        if ($movimentacoes_interna->status === 'aprovada') {
-            return response()->json(['message' => 'Movimentacoes aprovadas nao podem ser removidas.'], 422);
-        }
-
         $movimentacoes_interna->delete();
         return response()->json(null, 204);
     }

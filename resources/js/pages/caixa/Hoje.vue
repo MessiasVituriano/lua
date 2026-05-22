@@ -74,8 +74,11 @@
                             </select>
                         </div>
                         <div class="col-12 col-md-2">
-                            <label class="form-label small">Banco</label>
-                            <select class="form-select" v-model="form.banco_id" :disabled="form.forma_recebimento === 'dinheiro' || !form.forma_recebimento">
+                            <label class="form-label small">
+                                Banco
+                                <span v-if="['pix','cartao_debito','cartao_credito'].includes(form.forma_recebimento)" class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" :class="{ 'border-danger': ['pix','cartao_debito','cartao_credito'].includes(form.forma_recebimento) && !form.banco_id }" v-model="form.banco_id" :disabled="form.forma_recebimento === 'dinheiro' || !form.forma_recebimento">
                                 <option :value="null">-</option>
                                 <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nome }}</option>
                             </select>
@@ -441,6 +444,43 @@
                     </table>
                 </div>
             </div>
+
+            <!-- Movimentacoes do dia (sangrias/aportes) -->
+            <div v-if="movimentacoesHoje.length" class="card mt-3">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">Movimentacoes do Dia (Sangrias / Aportes)</h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Descricao</th>
+                                <th>Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="m in movimentacoesHoje" :key="m.id">
+                                <td class="text-muted small">{{ fmtDate(m.data_movimentacao) }}</td>
+                                <td>
+                                    <span class="badge" :class="m.tipo === 'sangria' ? 'bg-danger' : 'bg-success'">
+                                        {{ m.tipo === 'sangria' ? 'Sangria' : 'Aporte' }}
+                                    </span>
+                                </td>
+                                <td>{{ m.descricao || '-' }}</td>
+                                <td :class="m.tipo === 'sangria' ? 'fw-semibold text-danger' : 'fw-semibold text-success'">
+                                    {{ m.tipo === 'sangria' ? '-' : '+' }}R$ {{ fmt(m.valor) }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-white small text-muted d-flex gap-3">
+                    <span v-if="totalAportes > 0">Aportes: <strong class="text-success">+R$ {{ fmt(totalAportes) }}</strong></span>
+                    <span v-if="totalSangrias > 0">Sangrias: <strong class="text-danger">-R$ {{ fmt(totalSangrias) }}</strong></span>
+                </div>
+            </div>
         </div>
     </div>
 </template>
@@ -456,6 +496,7 @@ const loading = ref(false);
 const saving = ref(false);
 const caixa = ref(null);
 const entradas = ref([]);
+const movimentacoesHoje = ref([]);
 const bancos = ref([]);
 const bancosMap = ref({});
 const valorInput = ref(null);
@@ -561,7 +602,9 @@ const previewCalc = computed(() => {
 
 // Totais calculados localmente (instantaneo)
 const totalEntradas = computed(() => entradas.value.reduce((s, e) => s + parseFloat(e.valor || 0), 0));
-const saldo = computed(() => totalEntradas.value - parseFloat(caixa.value?.total_saidas || 0));
+const totalAportes = computed(() => movimentacoesHoje.value.filter(m => m.tipo === 'aporte').reduce((s, m) => s + parseFloat(m.valor || 0), 0));
+const totalSangrias = computed(() => movimentacoesHoje.value.filter(m => m.tipo === 'sangria').reduce((s, m) => s + parseFloat(m.valor || 0), 0));
+const saldo = computed(() => totalEntradas.value + totalAportes.value - totalSangrias.value - parseFloat(caixa.value?.total_saidas || 0));
 const totaisFormaCalc = computed(() => {
     const t = {};
     entradas.value.forEach(e => {
@@ -1031,6 +1074,18 @@ async function load() {
     lastSync.value = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
+async function loadMovimentacoesHoje() {
+    try {
+        const hoje = new Date().toISOString().slice(0, 10);
+        const { data } = await axios.get('/movimentacoes-internas', {
+            params: { data_inicio: hoje, data_fim: hoje, status: 'aprovada' },
+        });
+        movimentacoesHoje.value = (data.data || []).filter(m => ['sangria', 'aporte'].includes(m.tipo));
+    } catch {
+        movimentacoesHoje.value = [];
+    }
+}
+
 // ── Polling silencioso (nao reseta form, nao trava UI) ──
 async function silentSync() {
     if (!caixa.value) return;
@@ -1114,6 +1169,10 @@ async function adicionarEntrada() {
     }
     if (form.forma_recebimento === 'cartao_credito' && !form.parcelas) {
         swalWarning('Selecione a quantidade de parcelas.');
+        return;
+    }
+    if (['pix', 'cartao_debito', 'cartao_credito'].includes(form.forma_recebimento) && !form.banco_id) {
+        swalWarning('Selecione o banco para pagamento via ' + formas[form.forma_recebimento] + '.');
         return;
     }
     saving.value = true;
@@ -1270,6 +1329,7 @@ async function autorizarCaixa() {
 function fmt(v) { return Number(v || 0).toFixed(2).replace('.', ','); }
 function fmtPct(v) { return Number(v || 0).toFixed(2).replace('.', ',') + ' %'; }
 function fmtDt(d) { return d ? new Date(d).toLocaleString('pt-BR') : ''; }
+function fmtDate(d) { const s = typeof d === 'string' ? d.slice(0, 10) : d; return new Date(s + 'T12:00:00').toLocaleDateString('pt-BR'); }
 function fmtHora(d) {
     if (!d) return '';
     return new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -1315,6 +1375,7 @@ onMounted(async () => {
         loadPlanoAtivo(),
         loadProdutosRacaoFavoritos(),
         loadClientesComPets(),
+        loadMovimentacoesHoje(),
     ]);
     bancos.value = bancosRes.data.filter(b => b.ativo);
     bancosMap.value = Object.fromEntries(bancosRes.data.map(b => [b.id, b.nome]));

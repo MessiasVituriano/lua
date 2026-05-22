@@ -10,6 +10,8 @@
 
 Sistema web para gerenciamento do fluxo de caixa de PetShops com suporte a multi-loja. Controla entradas diarias por forma de recebimento, agendamento de pagamentos com recorrencia, fornecedores, produtos com margem e estoque, e oferece dashboard com resumo financeiro.
 
+Este documento tambem cobre a evolucao da operacao de Banho e Tosa, reaproveitando as bases ja existentes de clientes, pets, lojas, calendario de funcionamento, caixa diario e usuarios do projeto atual.
+
 ---
 
 ## 2. Modulos do Sistema
@@ -526,7 +528,182 @@ bancos (tabela global, max 5 registros)
 
 ---
 
-## 6. Regras Globais
+## 6. Banho e Tosa
+
+### 6.1 Objetivo
+
+Organizar a operacao de banho e tosa por loja, com foco em agenda, controle de horarios, catalogo de servicos, precificacao e visibilidade de custos. A funcionalidade deve usar as entidades ja presentes no sistema para evitar duplicidade de cadastro:
+
+- Cliente e Pet ja existentes em `clientes-pets`
+- Loja e usuario para definir responsabilidade e acesso
+- Calendario de funcionamento e excecoes para limitar horarios disponiveis
+- Caixa diario para refletir o faturamento dos atendimentos concluidos
+- Pagamentos para custos fixos, custos recorrentes e despesas operacionais
+
+### 6.2 Modulos da Funcionalidade
+
+#### 6.2.1 Agenda de Horarios
+
+**Descricao:** cadastro e gestao dos agendamentos de banho e tosa por loja, com horarios disponiveis por dia, duracao estimada e status operacional.
+
+**Entidades - Agendamento de Banho e Tosa:**
+
+| Campo               | Tipo     | Obrigatorio | Observacao |
+|--------------------|----------|-------------|------------|
+| id                 | integer  | auto        | PK |
+| loja_id            | integer  | sim         | FK para loja |
+| cliente_id         | integer  | sim         | FK para cliente |
+| pet_id             | integer  | sim         | FK para pet |
+| usuario_responsavel_id | integer | nao      | FK usuario que registrou ou atendeu |
+| data               | date     | sim         | data do atendimento |
+| horario_inicio     | time     | sim         | inicio do bloco |
+| horario_fim        | time     | sim         | calculado pela duracao ou informado manualmente |
+| duracao_minutos    | integer  | sim         | tempo estimado do atendimento |
+| status             | enum     | sim         | solicitado, confirmado, em_andamento, concluido, cancelado, faltou |
+| origem             | enum     | nao         | balcao, telefone, whatsapp, online |
+| observacao         | text     | nao         | anotacoes gerais |
+| valor_estimado     | decimal  | nao         | valor antes da finalizacao |
+| valor_final        | decimal  | nao         | valor cobrado na conclusao |
+| created_at         | datetime | auto        | |
+| updated_at         | datetime | auto        | |
+
+**Regras:**
+- O agendamento deve respeitar o calendario de funcionamento da loja e as excecoes cadastradas
+- Nao pode existir sobreposicao de horario para a mesma loja em um mesmo intervalo
+- O agendamento deve estar vinculado a um pet ativo da mesma loja do usuario logado
+- O horario final pode ser recalculado quando o servico ou a duracao forem alterados
+- Atendimentos concluidos podem gerar movimentacao no caixa diario da loja ativa
+
+**Funcionalidades:**
+- [ ] CRUD de agendamentos
+- [ ] Lista diaria com horario, cliente, pet, servico e status
+- [ ] Visualizacao em agenda por dia e por semana
+- [ ] Reagendamento rapido com verificacao de conflito
+- [ ] Cancelamento com motivo
+- [ ] Marcacao de no-show / faltou
+- [ ] Indicacao visual de status por cor
+
+#### 6.2.2 Catalogo de Servicos
+
+**Descricao:** cadastro dos servicos oferecidos pela loja, com preco base, duracao padrao e custo estimado.
+
+**Entidades - Servico de Banho e Tosa:**
+
+| Campo            | Tipo     | Obrigatorio | Observacao |
+|-----------------|----------|-------------|------------|
+| id              | integer  | auto        | PK |
+| loja_id         | integer  | sim         | FK para loja |
+| nome            | string   | sim         | ex: banho simples, banho e tosa, higienizacao |
+| categoria       | enum     | sim         | banho, tosa, pacote, extra |
+| descricao       | string   | nao         | detalhamento comercial |
+| preco_base      | decimal  | sim         | preco sugerido |
+| custo_estimado  | decimal  | nao         | custo medio por execucao |
+| duracao_minutos | integer  | sim         | tempo padrao para agenda |
+| ativo           | boolean  | sim         | default true |
+| created_at      | datetime | auto        | |
+| updated_at      | datetime | auto        | |
+
+**Regras:**
+- O catalogo deve permitir servicos fixos e extras avulsos
+- O preco base pode ser ajustado no agendamento final, com registro da alteracao
+- A duracao padrao deve ser usada para sugerir o horario fim do atendimento
+
+**Funcionalidades:**
+- [ ] CRUD de servicos
+- [ ] Listagem para uso no agendamento
+- [ ] Ajuste de preco por loja
+- [ ] Desativacao de servicos sem perda de historico
+
+#### 6.2.3 Atendimento e Execucao
+
+**Descricao:** acompanhamento do atendimento desde a confirmacao ate a finalizacao, com controle de status, consumo de servicos extras e cobranca final.
+
+**Regras:**
+- Somente agendamentos confirmados podem entrar em execucao
+- Ao finalizar, o status vai para concluido e o valor final fica travado para auditoria
+- O atendente pode adicionar observacoes sobre comportamento do pet, produtos usados e ocorrencias
+- Atendimentos cancelados ou faltados nao entram no faturamento do caixa
+
+**Funcionalidades:**
+- [ ] Botao de iniciar atendimento
+- [ ] Botao de concluir atendimento
+- [ ] Registro de observacoes tecnicas e comerciais
+- [ ] Inclusao de extras no fechamento do atendimento
+- [ ] Historico do pet com ultimos servicos realizados
+
+#### 6.2.4 Custos da Operacao
+
+**Descricao:** controle dos custos vinculados ao banho e tosa, tanto por servico quanto por despesa recorrente da operacao.
+
+**Como o projeto atual pode ser reaproveitado:**
+- Custos fixos da operacao podem ser registrados em `Pagamentos` com categoria apropriada
+- Custos variaveis por atendimento podem ser estimados no catalogo de servicos
+- Custos recorrentes da area podem ser gerados automaticamente via fluxo de pagamentos recorrentes
+
+**Entidades - Custo Operacional de Banho e Tosa:**
+
+| Campo            | Tipo     | Obrigatorio | Observacao |
+|-----------------|----------|-------------|------------|
+| id              | integer  | auto        | PK |
+| loja_id         | integer  | sim         | FK |
+| servico_id      | integer  | nao         | FK para servico, quando custo estiver ligado a um servico |
+| tipo            | enum     | sim         | fixo, variavel, recorrente, insumo, comissao |
+| descricao       | string   | sim         | ex: shampoo, toalhas, comissao tosador |
+| valor           | decimal  | sim         | valor do custo |
+| data_custo      | date     | sim         | data de registro |
+| origem          | enum     | nao         | pagamento, atendimento, manual |
+| pagamento_id    | integer  | nao         | FK para pagamento, quando houver |
+| observacao      | text     | nao         | campo livre |
+| created_at      | datetime | auto        | |
+| updated_at      | datetime | auto        | |
+
+**Regras:**
+- Custos recorrentes devem ser consolidados por loja e por mes
+- Custos por servico devem permitir apurar margem bruta estimada
+- Se o custo estiver vinculado a um pagamento ja existente, o sistema nao deve duplicar o lancamento financeiro
+- Comissoes de profissionais podem ser calculadas por percentual ou valor fixo por servico
+
+**Funcionalidades:**
+- [ ] Cadastro de custos operacionais
+- [ ] Vinculo entre custo e servico executado
+- [ ] Vinculo entre custo e pagamento ja existente
+- [ ] Resumo mensal de custo total, ticket medio e margem estimada
+- [ ] Relatorio de custo por tipo de servico
+
+### 6.3 Integracoes com o que ja existe
+
+- `clientes-pets` ja resolve o cadastro de cliente e pet, entao o novo modulo deve reutilizar esses registros sem duplicar dados
+- `calendario_funcionamento` e `excecoes_funcionamento` ja definem a disponibilidade da loja e podem ser usados para bloquear horarios indisponiveis
+- `caixa/hoje` ja registra entradas, entao atendimentos concluidos podem ser contabilizados como receita operacional da loja
+- `pagamentos` ja cobre despesas, fornecedores e recorrencia, entao a estrutura de custos pode reaproveitar essa base
+- `usuarios` e `lojas` ja existem, entao o agendamento pode ser segmentado por loja e responsavel
+
+### 6.4 Regras de Negocio do Banho e Tosa
+
+- A agenda sempre pertence a uma loja especifica
+- Um pet nao pode ter dois agendamentos concorrentes no mesmo intervalo
+- A loja so pode abrir horarios dentro do calendario de funcionamento ativo
+- Excecoes de funcionamento com tipo fechado bloqueiam a agenda naquele dia
+- O status de concluido deve ser a unica condicao para faturamento no caixa
+- O sistema deve manter historico de alteracao de valor final, reagendamento e cancelamento
+- O usuario deve conseguir localizar rapidamente agenda por cliente, pet, data, status e servico
+- O historico do pet deve mostrar frequencia de retorno, servicos mais usados e ultimo atendimento
+
+### 6.5 Funcionalidades do MVP
+
+- [ ] Cadastro de servicos de banho e tosa
+- [ ] Agenda diaria com horarios disponiveis por loja
+- [ ] Cadastro e edicao de agendamentos vinculados a cliente e pet
+- [ ] Controle de status do atendimento
+- [ ] Integracao com calendario de funcionamento
+- [ ] Registro de valor estimado e valor final
+- [ ] Relatorio simples de faturamento por periodo
+- [ ] Relatorio de custos por servico e por mes
+- [ ] Pesquisa por cliente, pet, servico e data
+
+---
+
+## 7. Regras Globais
 
 - Todos os valores monetarios usam `decimal(10,2)`
 - Datas no formato brasileiro (dd/mm/yyyy) no frontend, ISO no banco
@@ -535,3 +712,198 @@ bancos (tabela global, max 5 registros)
 - Dados sempre filtrados pela loja ativa do usuario logado
 - Meses fechados nao permitem alteracao de metas ou do calendario de funcionamento
 - O dashboard deve refletir metas de venda e metas por saldo separadamente
+
+---
+
+## 8. Backlog Tecnico - Banho e Tosa
+
+### 8.1 Objetivo do Backlog
+
+Transformar a visao funcional de Banho e Tosa em entregas tecnicas implementaveis, com foco em reutilizar o que o projeto ja possui:
+
+- Cadastro de cliente e pet via `clientes-pets`
+- Loja ativa do usuario para isolamento por unidade
+- Calendario de funcionamento e excecoes para bloqueio de horarios
+- Caixa diario para refletir faturamento de atendimentos concluidos
+- Pagamentos para custos, recorrencias e despesas operacionais
+
+### 8.2 Epicos Tecnicos
+
+| Epic | Entrega | Dependencias | Prioridade |
+|------|---------|--------------|------------|
+| BT-01 | Base de dados e modelos | Cliente, Pet, Loja, calendario_funcionamento | Alta |
+| BT-02 | Servicos de banho e tosa | BT-01 | Alta |
+| BT-03 | Agenda e conflitos de horario | BT-01, BT-02, calendario_funcionamento, excecoes_funcionamento | Alta |
+| BT-04 | Fluxo de atendimento | BT-03 | Alta |
+| BT-05 | Cobranca e reflexo financeiro | BT-04, CaixaDiario, EntradaCaixa | Alta |
+| BT-06 | Custos operacionais e margem | BT-02, Pagamento | Media |
+| BT-07 | Relatorios e dashboard | BT-04, BT-05, BT-06 | Media |
+| BT-08 | Permissoes e UX operacional | Auth, usuarios, lojas | Media |
+
+### 8.3 Telas
+
+#### 8.3.1 Tela de Agenda
+
+**Objetivo:** visualizar a operacao do dia por loja, com horarios livres, agendados e em atendimento.
+
+**Componentes:**
+- Seletor de data
+- Filtro por loja, status, cliente, pet e servico
+- Timeline ou grade de horarios
+- Cards de agendamento com status e acoes rapidas
+- Indicador de horarios bloqueados por funcionamento ou excecao
+
+**Acoes:**
+- Criar agendamento
+- Reagendar
+- Confirmar
+- Iniciar atendimento
+- Concluir atendimento
+- Cancelar atendimento
+
+#### 8.3.2 Tela de Cadastro de Servicos
+
+**Objetivo:** gerenciar catalogo de servicos com preco, duracao e custo estimado.
+
+**Componentes:**
+- Lista de servicos
+- Formulario de criacao e edicao
+- Filtro por ativo/inativo
+- Indicador de margem estimada por servico
+
+**Acoes:**
+- Criar servico
+- Editar servico
+- Desativar servico
+- Consultar servicos usados com mais frequencia
+
+#### 8.3.3 Tela de Cadastro de Agendamento
+
+**Objetivo:** registrar o atendimento de um cliente e seu pet em um horario valido.
+
+**Componentes:**
+- Busca de cliente existente
+- Busca de pet do cliente
+- Selecao de servicos
+- Horario inicio e duracao
+- Valor estimado
+- Observacoes
+
+**Acoes:**
+- Salvar agendamento
+- Salvar e confirmar
+- Verificar conflito de horario
+
+#### 8.3.4 Tela de Atendimento
+
+**Objetivo:** controlar a execucao do atendimento ate a conclusao.
+
+**Componentes:**
+- Dados do cliente e pet
+- Servicos selecionados
+- Observacoes tecnicas
+- Extras adicionados no atendimento
+- Valor final
+- Status atual
+
+**Acoes:**
+- Iniciar
+- Pausar, se necessario
+- Concluir
+- Cancelar
+- Marcar como faltou
+
+#### 8.3.5 Tela de Custos e Rentabilidade
+
+**Objetivo:** consolidar custos operacionais e estimar margem por servico e por periodo.
+
+**Componentes:**
+- Lista de custos
+- Filtros por periodo, tipo e servico
+- Total de custos do mes
+- Ticket medio
+- Margem estimada
+- Custos por atendimento e custos recorrentes
+
+**Acoes:**
+- Registrar custo manual
+- Vincular custo a pagamento existente
+- Consultar fechamento mensal
+
+#### 8.3.6 Tela de Historico do Pet
+
+**Objetivo:** exibir o historico de atendimentos de cada pet.
+
+**Componentes:**
+- Linha do tempo de atendimentos
+- Ultimos servicos realizados
+- Frequencia de visitas
+- Observacoes relevantes
+
+**Acoes:**
+- Abrir agendamento anterior
+- Repetir servico anterior
+- Criar novo agendamento a partir do historico
+
+### 8.4 Endpoints
+
+#### 8.4.1 Reaproveitados do projeto atual
+
+- `GET /clientes-pets` - lista pets do usuario logado
+- `POST /clientes-pets` - cria cliente e pet juntos quando necessario
+- `GET /clientes-pets/clientes-list` - lista clientes ativos da loja
+- `GET /lojas/{loja}/calendario` - consulta dias ativos da loja
+- `POST /lojas/{loja}/calendario` - salva calendario de funcionamento
+- `GET /metas` - consulta configuracoes de calendario e excecoes para referencia operacional
+- `GET /caixa/hoje` - contexto do caixa diario para lancamento de receita
+- `POST /caixa/{caixa}/entrada` - registra entrada quando o atendimento for pago
+- `GET /pagamentos` - consulta custos e despesas ja cadastrados
+- `POST /pagamentos` - cria custo recorrente ou despesa operacional
+
+#### 8.4.2 Novos endpoints sugeridos
+
+**Servicos**
+- `GET /banho-tosa/servicos`
+- `GET /banho-tosa/servicos/{servico}`
+- `POST /banho-tosa/servicos`
+- `PUT /banho-tosa/servicos/{servico}`
+- `DELETE /banho-tosa/servicos/{servico}`
+
+**Agendamentos**
+- `GET /banho-tosa/agendamentos`
+- `GET /banho-tosa/agendamentos/{agendamento}`
+- `POST /banho-tosa/agendamentos`
+- `PUT /banho-tosa/agendamentos/{agendamento}`
+- `DELETE /banho-tosa/agendamentos/{agendamento}`
+- `POST /banho-tosa/agendamentos/{agendamento}/confirmar`
+- `POST /banho-tosa/agendamentos/{agendamento}/iniciar`
+- `POST /banho-tosa/agendamentos/{agendamento}/concluir`
+- `POST /banho-tosa/agendamentos/{agendamento}/cancelar`
+- `POST /banho-tosa/agendamentos/{agendamento}/faltou`
+- `GET /banho-tosa/agenda/diaria`
+- `GET /banho-tosa/agenda/semanal`
+
+**Atendimento e historico**
+- `GET /banho-tosa/pets/{pet}/historico`
+- `GET /banho-tosa/clientes/{cliente}/agendamentos`
+- `GET /banho-tosa/agendamentos/{agendamento}/resumo`
+
+**Custos e rentabilidade**
+- `GET /banho-tosa/custos`
+- `POST /banho-tosa/custos`
+- `PUT /banho-tosa/custos/{custo}`
+- `DELETE /banho-tosa/custos/{custo}`
+- `GET /banho-tosa/relatorios/rentabilidade`
+- `GET /banho-tosa/relatorios/agenda`
+- `GET /banho-tosa/relatorios/historico-pet`
+
+### 8.5 Ordem Sugerida de Implementacao
+
+1. Modelos e migrations de servicos, agendamentos e custos
+2. Regras de conflito de horario e disponibilidade por calendario
+3. CRUD de servicos
+4. CRUD de agendamentos
+5. Fluxo de atendimento com confirmacao, inicio e conclusao
+6. Integracao com caixa diario e pagamentos
+7. Telas de agenda e atendimento
+8. Historico do pet e relatorios de rentabilidade

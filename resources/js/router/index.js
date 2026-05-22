@@ -36,6 +36,10 @@ import AlertasMetricasIndex from '../pages/alertas-metricas/Index.vue';
 import MetasIndex from '../pages/metas/Index.vue';
 import ClientesPetsIndex from '../pages/clientes-pets/Index.vue';
 import ClientesPetsForm from '../pages/clientes-pets/Form.vue';
+import BanhoTosaAgenda from '../pages/banho-tosa/Agenda.vue';
+import BanhoTosaServicosIndex from '../pages/banho-tosa/ServicosIndex.vue';
+import BanhoTosaServicosForm from '../pages/banho-tosa/ServicosForm.vue';
+import BanhoTosaCustosIndex from '../pages/banho-tosa/CustosIndex.vue';
 
 const routes = [
     {
@@ -80,6 +84,12 @@ const routes = [
             { path: 'clientes-pets', name: 'clientes-pets.index', component: ClientesPetsIndex },
             { path: 'clientes-pets/criar', name: 'clientes-pets.create', component: ClientesPetsForm },
             { path: 'clientes-pets/:id/editar', name: 'clientes-pets.edit', component: ClientesPetsForm },
+            // Banho e Tosa
+            { path: 'banho-tosa/agenda', name: 'banho-tosa.agenda', component: BanhoTosaAgenda },
+            { path: 'banho-tosa/servicos', name: 'banho-tosa.servicos.index', component: BanhoTosaServicosIndex },
+            { path: 'banho-tosa/servicos/criar', name: 'banho-tosa.servicos.create', component: BanhoTosaServicosForm },
+            { path: 'banho-tosa/servicos/:id/editar', name: 'banho-tosa.servicos.edit', component: BanhoTosaServicosForm },
+            { path: 'banho-tosa/custos', name: 'banho-tosa.custos.index', component: BanhoTosaCustosIndex },
             // Usuarios
             { path: 'usuarios', name: 'usuarios.index', component: UsuariosIndex },
             { path: 'usuarios/criar', name: 'usuarios.create', component: UsuariosForm },
@@ -136,7 +146,8 @@ router.beforeEach(async (to, from, next) => {
         'caixa.historico', 'pagamentos.index', 'pagamentos.calendario', 'pagamentos.create', 'pagamentos.edit',
         'movimentacoes.index', 'movimentacoes.create', 'movimentacoes.edit',
         'alertas-metricas.index', 'metas.index',
-        'produtos.create', 'produtos.edit'];
+        'produtos.create', 'produtos.edit',
+        'banho-tosa.custos.index', 'banho-tosa.servicos.create', 'banho-tosa.servicos.edit'];
     if (auth.user && auth.user.role !== 'admin' && adminRoutes.includes(to.name)) {
         return next({ name: 'caixa.hoje' });
     }

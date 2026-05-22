@@ -7,7 +7,6 @@ use App\Models\Fornecedor;
 use App\Models\Loja;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
@@ -55,6 +54,7 @@ class DatabaseSeeder extends Seeder
             FluxoCaixaSeeder::class,
             DemoVendasPorAnimalSeeder::class,
             MetasSeeder::class,
+            BanhoTosaSeeder::class,
         ]);
     }
 }

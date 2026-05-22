@@ -17,10 +17,11 @@ class EntradaCaixaRequest extends FormRequest
     {
         $ehCartao = in_array($this->input('forma_recebimento'), ['cartao_debito', 'cartao_credito']);
         $ehCredito = $this->input('forma_recebimento') === 'cartao_credito';
+        $ehCartaoOuPix = in_array($this->input('forma_recebimento'), ['cartao_debito', 'cartao_credito', 'pix']);
 
         return [
             'forma_recebimento' => ['required', Rule::in(['dinheiro', 'pix', 'cartao_debito', 'cartao_credito'])],
-            'banco_id' => ['nullable', 'exists:bancos,id'],
+            'banco_id' => [$ehCartaoOuPix ? 'required' : 'nullable', 'exists:bancos,id'],
             'valor' => ['nullable', 'required_without:itens', 'numeric', 'min:0.01'],
             'desconto' => ['nullable', 'numeric', 'min:0'],
             'descricao' => ['nullable', 'string', 'max:255'],
@@ -46,6 +47,7 @@ class EntradaCaixaRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'banco_id.required' => 'Informe o banco para este tipo de pagamento.',
             'bandeira_id.required' => 'Informe a bandeira do cartao.',
             'parcelas.required' => 'Informe a quantidade de parcelas.',
             'valor.required_without' => 'Informe o valor da entrada ou adicione pelo menos um item.',

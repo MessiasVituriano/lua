@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Api\BancoController;
 use App\Http\Controllers\Api\AlertasMetricasController;
+use App\Http\Controllers\Api\BanhoTosaAgendamentoController;
+use App\Http\Controllers\Api\BanhoTosaServicoController;
+use App\Http\Controllers\Api\BanhoTosaCustoController;
 use App\Http\Controllers\Api\BandeiraController;
 use App\Http\Controllers\Api\CaixaController;
 use App\Http\Controllers\Api\ClientePetController;
@@ -71,6 +74,17 @@ Route::middleware('auth:sanctum')->group(function () {
     // Alertas pagamentos (badge no sidebar)
     Route::get('pagamentos-alertas', [PagamentoController::class, 'alertas']);
 
+    // === Banho e Tosa (admin + atendente) ===
+    Route::get('banho-tosa/agendamentos', [BanhoTosaAgendamentoController::class, 'index']);
+    Route::post('banho-tosa/agendamentos', [BanhoTosaAgendamentoController::class, 'store']);
+    Route::put('banho-tosa/agendamentos/{agendamento}', [BanhoTosaAgendamentoController::class, 'update']);
+    Route::post('banho-tosa/agendamentos/{agendamento}/confirmar', [BanhoTosaAgendamentoController::class, 'confirmar']);
+    Route::post('banho-tosa/agendamentos/{agendamento}/iniciar', [BanhoTosaAgendamentoController::class, 'iniciar']);
+    Route::post('banho-tosa/agendamentos/{agendamento}/concluir', [BanhoTosaAgendamentoController::class, 'concluir']);
+    Route::post('banho-tosa/agendamentos/{agendamento}/cancelar', [BanhoTosaAgendamentoController::class, 'cancelar']);
+    Route::get('banho-tosa/servicos', [BanhoTosaServicoController::class, 'index']);
+    Route::get('banho-tosa/servicos/{servico}', [BanhoTosaServicoController::class, 'show']);
+
     // === Acesso: somente admin ===
     Route::middleware('role:admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index']);
@@ -120,5 +134,13 @@ Route::middleware('auth:sanctum')->group(function () {
         // Pagamentos (completo)
         Route::apiResource('pagamentos', PagamentoController::class);
         Route::post('pagamentos/{pagamento}/pagar', [PagamentoController::class, 'registrarPagamento']);
+
+        // Banho e Tosa escrita (somente admin)
+        Route::post('banho-tosa/servicos', [BanhoTosaServicoController::class, 'store']);
+        Route::put('banho-tosa/servicos/{servico}', [BanhoTosaServicoController::class, 'update']);
+        Route::delete('banho-tosa/servicos/{servico}', [BanhoTosaServicoController::class, 'destroy']);
+        Route::get('banho-tosa/custos', [BanhoTosaCustoController::class, 'index']);
+        Route::post('banho-tosa/custos', [BanhoTosaCustoController::class, 'store']);
+        Route::delete('banho-tosa/custos/{custo}', [BanhoTosaCustoController::class, 'destroy']);
     });
 });

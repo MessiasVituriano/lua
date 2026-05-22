@@ -54,6 +54,21 @@
                 <span>Clientes & Pets</span>
             </router-link>
 
+            <div class="nav-section">Banho e Tosa</div>
+
+            <router-link class="nav-item" active-class="active" :to="{ name: 'banho-tosa.agenda' }" @click="closeMobile">
+                <CalendarRange :size="16" class="nav-icon" />
+                <span>Agenda</span>
+            </router-link>
+            <router-link class="nav-item" active-class="active" :to="{ name: 'banho-tosa.servicos.index' }" @click="closeMobile">
+                <Scissors :size="16" class="nav-icon" />
+                <span>Serviços</span>
+            </router-link>
+            <router-link v-if="isAdmin" class="nav-item" active-class="active" :to="{ name: 'banho-tosa.custos.index' }" @click="closeMobile">
+                <TrendingUp :size="16" class="nav-icon" />
+                <span>Custos e Rentabilidade</span>
+            </router-link>
+
             <div class="nav-section">Financeiro</div>
 
             <router-link class="nav-item" active-class="active" :to="{ name: 'caixa.hoje' }" @click="closeMobile">
@@ -189,7 +204,8 @@ import axios from 'axios';
 import {
     Moon, Sun, Menu, X, LogOut, Store, Building2, Truck, Wallet,
     ArrowLeftRight, History, CalendarCheck, CalendarDays, Package,
-    Users, LayoutDashboard, AlertTriangle, CreditCard, Layers, Target
+    Users, LayoutDashboard, AlertTriangle, CreditCard, Layers, Target,
+    CalendarRange, Scissors, TrendingUp
 } from 'lucide-vue-next';
 
 const route = useRoute();
