@@ -96,6 +96,39 @@
         <router-link :to="{ name: 'caixa.historico' }" class="btn btn-outline-secondary mt-3">
             <i class="bi bi-arrow-left"></i> Voltar ao Historico
         </router-link>
+
+        <!-- Movimentacoes do dia (sangrias/aportes) -->
+        <div v-if="movimentacoesDia.length" class="card mt-3">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">Movimentacoes do Dia (Sangrias / Aportes)</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Descricao</th>
+                            <th>Banco</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="m in movimentacoesDia" :key="m.id">
+                            <td>
+                                <span class="badge" :class="m.tipo === 'sangria' ? 'bg-danger' : 'bg-success'">
+                                    {{ m.tipo === 'sangria' ? 'Sangria' : 'Aporte' }}
+                                </span>
+                            </td>
+                            <td>{{ m.descricao || '-' }}</td>
+                            <td>{{ m.banco_origem?.nome || m.banco_destino?.nome || '-' }}</td>
+                            <td :class="m.tipo === 'sangria' ? 'fw-semibold text-danger' : 'fw-semibold text-success'">
+                                {{ m.tipo === 'sangria' ? '-' : '+' }}R$ {{ fmt(m.valor) }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -111,6 +144,7 @@ const auth = useAuthStore();
 const userIsAdmin = computed(() => auth.user?.role === 'admin');
 const caixa = ref(null);
 const totaisPorForma = ref({});
+const movimentacoesDia = ref([]);
 const formas = { dinheiro: 'Dinheiro', pix: 'PIX', cartao_debito: 'Cartão Débito', cartao_credito: 'Cartão Crédito' };
 
 function fmt(v) { return Number(v || 0).toFixed(2).replace('.', ','); }
@@ -119,6 +153,18 @@ async function loadCaixa() {
     const { data } = await axios.get('/caixa/' + route.params.id);
     caixa.value = data.caixa;
     totaisPorForma.value = data.totais_por_forma || {};
+
+    if (data.caixa?.data) {
+        try {
+            const dataStr = data.caixa.data.slice(0, 10);
+            const movRes = await axios.get('/movimentacoes-internas', {
+                params: { data_inicio: dataStr, data_fim: dataStr, status: 'aprovada' },
+            });
+            movimentacoesDia.value = (movRes.data.data || []).filter(m => ['sangria', 'aporte'].includes(m.tipo));
+        } catch {
+            movimentacoesDia.value = [];
+        }
+    }
 }
 
 async function fecharCaixa() {
