@@ -35,19 +35,7 @@ class DashboardController extends Controller
             ->whereBetween('data_pagamento', [$inicio, $fim])
             ->sum('valor_pago');
 
-        $totalAportes = MovimentacaoInterna::where('loja_id', $lojaId)
-            ->where('status', 'aprovada')
-            ->where('tipo', 'aporte')
-            ->whereBetween('data_movimentacao', [$inicio, $fim])
-            ->sum('valor');
-
-        $totalSangrias = MovimentacaoInterna::where('loja_id', $lojaId)
-            ->where('status', 'aprovada')
-            ->where('tipo', 'sangria')
-            ->whereBetween('data_movimentacao', [$inicio, $fim])
-            ->sum('valor');
-
-        $saldo = $totalEntradas + $totalAportes - $totalSaidas - $totalSangrias;
+        $saldo = $totalEntradas - $totalSaidas;
 
         $caixasAbertos = CaixaDiario::where('loja_id', $lojaId)
             ->where('status', 'aberto')
