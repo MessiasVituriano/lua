@@ -305,7 +305,7 @@ async function handleLogout() {
 /* ============ Sidebar ============ */
 .sidebar {
     width: 248px;
-    min-height: 100vh;
+    height: 100vh;
     background: var(--lua-sidebar);
     border-right: 1px solid var(--lua-sidebar-border);
     position: fixed;
