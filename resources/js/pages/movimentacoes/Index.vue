@@ -221,7 +221,10 @@ const isAdmin = computed(() => auth.user?.role === 'admin');
 const movimentacoes = ref([]);
 const totalPendentes = ref(0);
 const tipos = { transferencia_banco: 'Transf. Banco', sangria: 'Sangria', aporte: 'Aporte', transferencia_loja: 'Transf. Loja' };
-const filters = reactive({ tipo: '', status: '', data_inicio: '', data_fim: '' });
+const _now = new Date();
+const _mesInicio = new Date(_now.getFullYear(), _now.getMonth(), 1).toISOString().slice(0, 10);
+const _mesFim = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).toISOString().slice(0, 10);
+const filters = reactive({ tipo: '', status: '', data_inicio: _mesInicio, data_fim: _mesFim });
 const loadingSaldos = ref(false);
 const saldos = reactive({
     bancos: [],
@@ -271,7 +274,10 @@ async function loadSaldos() {
 }
 
 function clearFilters() {
-    Object.keys(filters).forEach(k => filters[k] = '');
+    filters.tipo = '';
+    filters.status = '';
+    filters.data_inicio = _mesInicio;
+    filters.data_fim = _mesFim;
     load();
     loadSaldos();
 }

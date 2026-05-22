@@ -165,7 +165,10 @@ const auth = useAuthStore();
 const userIsAdmin = computed(() => auth.user?.role === 'admin');
 const caixas = ref([]);
 const totais = ref({ total_entradas: 0, total_saidas: 0, saldo: 0, count: 0 });
-const filters = reactive({ data_inicio: '', data_fim: '', status: '' });
+const _now = new Date();
+const _mesInicio = new Date(_now.getFullYear(), _now.getMonth(), 1).toISOString().slice(0, 10);
+const _mesFim = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).toISOString().slice(0, 10);
+const filters = reactive({ data_inicio: _mesInicio, data_fim: _mesFim, status: '' });
 
 const modalRetroEl = ref(null);
 let modalRetroInstance = null;
@@ -184,8 +187,8 @@ async function load() {
 }
 
 function clearFilters() {
-    filters.data_inicio = '';
-    filters.data_fim = '';
+    filters.data_inicio = _mesInicio;
+    filters.data_fim = _mesFim;
     filters.status = '';
     load();
 }
