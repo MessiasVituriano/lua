@@ -188,7 +188,15 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        $metas = app(MetaService::class)->resumoPeriodo($lojaId, $inicio, $fim);
+        // Sincroniza metas de cada mes do periodo antes de montar o resumo
+        $metaService = app(MetaService::class);
+        $mesSync = Carbon::parse($inicio)->startOfMonth();
+        while ($mesSync->lte(Carbon::parse($fim))) {
+            $metaService->atualizarRealizadoDia($lojaId, $mesSync->toDateString());
+            $mesSync->addMonth();
+        }
+
+        $metas = $metaService->resumoPeriodo($lojaId, $inicio, $fim);
 
         // ── Movimentacoes internas do periodo ──
         $movInternas = MovimentacaoInterna::where('loja_id', $lojaId)
