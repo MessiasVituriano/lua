@@ -112,6 +112,28 @@ class MetaService
         return $metaMensal->fresh(['diarias']);
     }
 
+    /**
+     * Atualiza o valor_realizado das MetaDiarias de um dia especifico
+     * a partir dos totais ja calculados no CaixaDiario.
+     * Chamado automaticamente por CaixaDiario::recalcular().
+     */
+    public function atualizarRealizadoDia(int $lojaId, string $data): void
+    {
+        $competencia = Carbon::parse($data)->startOfMonth();
+
+        // Evita processamento se nao ha metas abertas para o mes
+        $temMeta = MetaMensal::where('loja_id', $lojaId)
+            ->whereDate('competencia', $competencia->toDateString())
+            ->where('status', 'aberta')
+            ->exists();
+
+        if (!$temMeta) {
+            return;
+        }
+
+        $this->sincronizarCompetencia($lojaId, $competencia);
+    }
+
     public function montarResumo(int $lojaId, ?string $competenciaInput = null): array
     {
         $competencia = Carbon::parse($competenciaInput ?? now()->startOfMonth())->startOfMonth();

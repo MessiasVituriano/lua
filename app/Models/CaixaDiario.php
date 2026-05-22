@@ -75,5 +75,11 @@ class CaixaDiario extends Model
 
         $this->saldo = $this->total_entradas - $this->total_saidas + $aportes - $sangrias;
         $this->save();
+
+        // Atualiza o realizado nas metas diarias deste dia
+        app(\App\Services\MetaService::class)->atualizarRealizadoDia(
+            $this->loja_id,
+            $this->data->toDateString()
+        );
     }
 }
