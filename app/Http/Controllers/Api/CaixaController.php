@@ -22,7 +22,7 @@ class CaixaController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('role:admin')->only(['historico', 'autorizar', 'reabrir']);
+        $this->middleware('role:admin')->only(['historico', 'autorizar', 'reabrir', 'atualizarEntrada']);
     }
 
     public function hoje()
@@ -454,6 +454,34 @@ class CaixaController extends Controller
             'cliente' => $cliente,
             'pet' => $pet,
         ], 201);
+    }
+
+    public function atualizarEntrada(Request $request, CaixaDiario $caixa, EntradaCaixa $entrada)
+    {
+        if (in_array($caixa->status, ['fechado', 'pendente'])) {
+            return response()->json(['message' => 'Caixa nao esta aberto.'], 422);
+        }
+
+        if ($entrada->caixa_diario_id !== $caixa->id) {
+            return response()->json(['message' => 'Entrada nao pertence a este caixa.'], 422);
+        }
+
+        $dados = $request->validate([
+            'valor'     => ['required', 'numeric', 'min:0.01'],
+            'descricao' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        DB::transaction(function () use ($entrada, $dados, $caixa) {
+            $entrada->update([
+                'valor'     => round((float) $dados['valor'], 2),
+                'descricao' => array_key_exists('descricao', $dados) ? $dados['descricao'] : $entrada->descricao,
+            ]);
+            $caixa->recalcular();
+        });
+
+        return response()->json(
+            $entrada->fresh()->load(['banco', 'bandeira', 'itens.produto', 'itens.pet.cliente', 'itens.cliente'])
+        );
     }
 
     private function calcularTotalItens($itensPayload): float

@@ -35,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('caixa/clientes-com-pets', [CaixaController::class, 'criarClienteComPet']);
     Route::get('caixa/{caixa}', [CaixaController::class, 'show'])->where('caixa', '[0-9]+');
     Route::post('caixa/{caixa}/entrada', [CaixaController::class, 'adicionarEntrada']);
+    Route::put('caixa/{caixa}/entrada/{entrada}', [CaixaController::class, 'atualizarEntrada']);
     Route::delete('caixa/{caixa}/entrada/{entrada}', [CaixaController::class, 'removerEntrada']);
     Route::get('caixa/produtos-racao-favoritos', [CaixaController::class, 'produtosRacaoFavoritos']);
     Route::post('caixa/{caixa}/fechar', [CaixaController::class, 'fechar']);
