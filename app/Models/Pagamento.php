@@ -11,6 +11,7 @@ class Pagamento extends Model
 
     protected $fillable = [
         'loja_id',
+        'pedido_compra_id',
         'fornecedor_id',
         'categoria',
         'descricao',
@@ -53,6 +54,11 @@ class Pagamento extends Model
     public function loja()
     {
         return $this->belongsTo(Loja::class);
+    }
+
+    public function pedidoCompra()
+    {
+        return $this->belongsTo(PedidoCompra::class);
     }
 
     public function fornecedor()

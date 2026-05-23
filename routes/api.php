@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\FornecedorController;
 use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\LojaController;
 use App\Http\Controllers\Api\PagamentoController;
+use App\Http\Controllers\Api\PedidoCompraController;
 use App\Http\Controllers\Api\PlanoMaquininhaController;
 use App\Http\Controllers\Api\MovimentacaoInternaController;
 use App\Http\Controllers\Api\ProdutoController;
@@ -143,5 +144,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('banho-tosa/custos', [BanhoTosaCustoController::class, 'index']);
         Route::post('banho-tosa/custos', [BanhoTosaCustoController::class, 'store']);
         Route::delete('banho-tosa/custos/{custo}', [BanhoTosaCustoController::class, 'destroy']);
+
+        // Pedidos de Compra
+        Route::get('pedidos-compra', [PedidoCompraController::class, 'index']);
+        Route::post('pedidos-compra', [PedidoCompraController::class, 'store']);
+        Route::get('pedidos-compra/{pedidoCompra}', [PedidoCompraController::class, 'show']);
+        Route::put('pedidos-compra/{pedidoCompra}', [PedidoCompraController::class, 'update']);
+        Route::patch('pedidos-compra/{pedidoCompra}/pagamento', [PedidoCompraController::class, 'atualizarDadosPagamento']);
+        Route::post('pedidos-compra/{pedidoCompra}/confirmar', [PedidoCompraController::class, 'confirmar']);
+        Route::post('pedidos-compra/{pedidoCompra}/confirmar-entrega', [PedidoCompraController::class, 'confirmarEntrega']);
+        Route::post('pedidos-compra/{pedidoCompra}/cancelar', [PedidoCompraController::class, 'cancelar']);
     });
 });

@@ -40,6 +40,8 @@ import BanhoTosaAgenda from '../pages/banho-tosa/Agenda.vue';
 import BanhoTosaServicosIndex from '../pages/banho-tosa/ServicosIndex.vue';
 import BanhoTosaServicosForm from '../pages/banho-tosa/ServicosForm.vue';
 import BanhoTosaCustosIndex from '../pages/banho-tosa/CustosIndex.vue';
+import PedidosCompraIndex from '../pages/pedidos-compra/Index.vue';
+import PedidosCompraForm from '../pages/pedidos-compra/Form.vue';
 
 const routes = [
     {
@@ -109,6 +111,11 @@ const routes = [
             { path: 'pagamentos/calendario', name: 'pagamentos.calendario', component: PagamentosCalendario },
             { path: 'pagamentos/criar', name: 'pagamentos.create', component: PagamentosForm },
             { path: 'pagamentos/:id/editar', name: 'pagamentos.edit', component: PagamentosForm },
+            // Pedidos de Compra
+            { path: 'pedidos-compra', name: 'pedidos-compra.index', component: PedidosCompraIndex },
+            { path: 'pedidos-compra/criar', name: 'pedidos-compra.create', component: PedidosCompraForm },
+            { path: 'pedidos-compra/:id', name: 'pedidos-compra.show', component: PedidosCompraForm },
+            { path: 'pedidos-compra/:id/editar', name: 'pedidos-compra.edit', component: PedidosCompraForm },
             // Produtos
             { path: 'produtos', name: 'produtos.index', component: ProdutosIndex },
             { path: 'produtos/criar', name: 'produtos.create', component: ProdutosForm },
@@ -147,7 +154,8 @@ router.beforeEach(async (to, from, next) => {
         'movimentacoes.index', 'movimentacoes.create', 'movimentacoes.edit',
         'alertas-metricas.index', 'metas.index',
         'produtos.create', 'produtos.edit',
-        'banho-tosa.custos.index', 'banho-tosa.servicos.create', 'banho-tosa.servicos.edit'];
+        'banho-tosa.custos.index', 'banho-tosa.servicos.create', 'banho-tosa.servicos.edit',
+        'pedidos-compra.index', 'pedidos-compra.create', 'pedidos-compra.show', 'pedidos-compra.edit'];
     if (auth.user && auth.user.role !== 'admin' && adminRoutes.includes(to.name)) {
         return next({ name: 'caixa.hoje' });
     }

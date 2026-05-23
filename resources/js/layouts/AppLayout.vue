@@ -106,6 +106,10 @@
                 <Package :size="16" class="nav-icon" />
                 <span>Produtos</span>
             </router-link>
+            <router-link v-if="isAdmin" class="nav-item" active-class="active" :to="{ name: 'pedidos-compra.index' }" @click="closeMobile">
+                <ShoppingCart :size="16" class="nav-icon" />
+                <span>Pedidos de Compra</span>
+            </router-link>
 
             <template v-if="isAdmin">
                 <div class="nav-section">Sistema</div>
@@ -205,7 +209,7 @@ import {
     Moon, Sun, Menu, X, LogOut, Store, Building2, Truck, Wallet,
     ArrowLeftRight, History, CalendarCheck, CalendarDays, Package,
     Users, LayoutDashboard, AlertTriangle, CreditCard, Layers, Target,
-    CalendarRange, Scissors, TrendingUp
+    CalendarRange, Scissors, TrendingUp, ShoppingCart
 } from 'lucide-vue-next';
 
 const route = useRoute();
