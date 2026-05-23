@@ -65,7 +65,7 @@
                             <td v-if="isAdmin">{{ p.margem }}%</td>
                             <td v-if="isAdmin" class="fw-bold">R$ {{ fmt(p.valor_venda) }}</td>
                             <td>
-                                {{ p.estoque_atual }}
+                                {{ isRacao(p) ? fmtGramas(p.estoque_atual) : p.estoque_atual }}
                                 <span v-if="p.estoque_min !== null && p.estoque_atual <= p.estoque_min" class="text-danger">
                                     <i class="bi bi-exclamation-triangle-fill"></i>
                                 </span>
@@ -134,6 +134,12 @@ async function destroy(p) {
 }
 
 function fmt(v) { return Number(v || 0).toFixed(2).replace('.', ','); }
+function isRacao(p) { return p.categoria === 'racao' || p.categoria === 'racao_umida'; }
+function fmtGramas(g) {
+    const n = Number(g || 0);
+    if (Math.abs(n) >= 1000) return (n / 1000).toFixed(3).replace('.', ',').replace(/,?0+$/, '') + ' kg';
+    return n + ' g';
+}
 
 onMounted(async () => {
     const { data } = await axios.get('/fornecedores?ativo=1');

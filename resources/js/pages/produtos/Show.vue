@@ -34,8 +34,8 @@
                     <div class="mb-2">
                         <span class="text-muted small">Estoque</span>
                         <div class="fs-4 fw-bold" :class="estoqueAlert ? 'text-danger' : ''">
-                            {{ produto.estoque_atual }}
-                            <small v-if="produto.estoque_min !== null" class="text-muted fs-6">(min: {{ produto.estoque_min }})</small>
+                            {{ isRacao ? fmtGramas(produto.estoque_atual) : produto.estoque_atual }}
+                            <small v-if="produto.estoque_min !== null" class="text-muted fs-6">(min: {{ isRacao ? fmtGramas(produto.estoque_min) : produto.estoque_min }})</small>
                         </div>
                     </div>
                     <div class="d-flex gap-2 mt-2">
@@ -58,7 +58,8 @@
                         </select>
                     </div>
                     <div class="mb-2">
-                        <input type="number" min="1" class="form-control form-control-sm" v-model="movForm.quantidade" placeholder="Quantidade">
+                        <input type="number" min="1" class="form-control form-control-sm" v-model="movForm.quantidade" :placeholder="isRacao ? 'Quantidade (gramas)' : 'Quantidade'">
+                        <div v-if="isRacao" class="form-text text-muted">Para racao, informe o peso em gramas (ex: 15kg = 15000g)</div>
                     </div>
                     <div class="mb-2">
                         <input type="text" class="form-control form-control-sm" v-model="movForm.motivo" placeholder="Motivo (opcional)">
@@ -94,7 +95,7 @@
                                             {{ m.tipo === 'entrada' ? 'Entrada' : 'Saida' }}
                                         </span>
                                     </td>
-                                    <td class="fw-bold">{{ m.tipo === 'entrada' ? '+' : '-' }}{{ m.quantidade }}</td>
+                                    <td class="fw-bold">{{ m.tipo === 'entrada' ? '+' : '-' }}{{ isRacao ? fmtGramas(m.quantidade) : m.quantidade }}</td>
                                     <td>{{ m.motivo || '-' }}</td>
                                     <td>{{ m.usuario?.name }}</td>
                                 </tr>
@@ -125,6 +126,7 @@ const movimentacoes = ref([]);
 const movForm = reactive({ tipo: 'entrada', quantidade: '', motivo: '' });
 const movLoading = ref(false);
 const categorias = { racao: 'Ração', racao_umida: 'Ração Úmida', medicamento: 'Medicamento', acessorio: 'Acessório', higiene: 'Higiene', petisco: 'Petisco' };
+const isRacao = computed(() => produto.value?.categoria === 'racao' || produto.value?.categoria === 'racao_umida');
 const estoqueAlert = computed(() => produto.value && produto.value.estoque_min !== null && produto.value.estoque_atual <= produto.value.estoque_min);
 
 async function loadProduto() {
@@ -153,6 +155,11 @@ async function registrarMov() {
 
 function fmt(v) { return Number(v || 0).toFixed(2).replace('.', ','); }
 function fmtDt(d) { return new Date(d).toLocaleString('pt-BR'); }
+function fmtGramas(g) {
+    const n = Number(g || 0);
+    if (Math.abs(n) >= 1000) return (n / 1000).toFixed(3).replace('.', ',').replace(/,?0+$/, '') + ' kg';
+    return n + ' g';
+}
 
 onMounted(() => Promise.all([loadProduto(), loadMovs()]));
 </script>
