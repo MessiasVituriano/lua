@@ -100,9 +100,12 @@
                                 <router-link :to="{ name: 'pedidos-compra.show', params: { id: p.id } }" class="btn btn-sm btn-outline-primary me-1">
                                     <i class="bi bi-eye"></i>
                                 </router-link>
-                                <router-link v-if="p.status === 'pendente'" :to="{ name: 'pedidos-compra.edit', params: { id: p.id } }" class="btn btn-sm btn-outline-secondary">
+                                <router-link v-if="p.status === 'pendente'" :to="{ name: 'pedidos-compra.edit', params: { id: p.id } }" class="btn btn-sm btn-outline-secondary me-1">
                                     <i class="bi bi-pencil"></i>
                                 </router-link>
+                                <a :href="`/api/pedidos-compra/${p.id}/pdf?sem_valores=1`" target="_blank" class="btn btn-sm btn-outline-secondary" title="PDF sem valores">
+                                    <i class="bi bi-file-earmark-pdf"></i>
+                                </a>
                             </td>
                         </tr>
                     </tbody>

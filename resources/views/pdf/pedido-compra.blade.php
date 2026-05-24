@@ -28,7 +28,7 @@
         </div>
         <div class="field">
             <div class="field-label">Criado por</div>
-            <div class="field-value">{{ $pedido->usuario?->nome ?? '—' }}</div>
+            <div class="field-value">{{ $pedido->usuario?->name ?? '—' }}</div>
         </div>
         <div class="field">
             <div class="field-label">Loja</div>
@@ -89,8 +89,10 @@
                 <th>#</th>
                 <th>Produto</th>
                 <th class="text-right">Qtd</th>
+                @unless($semValores ?? false)
                 <th class="text-right">Vlr. Unit.</th>
                 <th class="text-right">Subtotal</th>
+                @endunless
             </tr>
         </thead>
         <tbody>
@@ -99,17 +101,21 @@
                 <td>{{ $i + 1 }}</td>
                 <td>{{ $item->produto?->nome ?? '—' }}</td>
                 <td class="text-right">{{ number_format($item->quantidade, 2, ',', '.') }}</td>
+                @unless($semValores ?? false)
                 <td class="text-right">R$ {{ number_format($item->valor_unitario, 2, ',', '.') }}</td>
                 <td class="text-right">R$ {{ number_format($item->quantidade * $item->valor_unitario, 2, ',', '.') }}</td>
+                @endunless
             </tr>
             @endforeach
         </tbody>
+        @unless($semValores ?? false)
         <tfoot>
             <tr>
                 <td colspan="4" class="text-right">Total</td>
                 <td class="text-right">R$ {{ number_format($pedido->valor_total, 2, ',', '.') }}</td>
             </tr>
         </tfoot>
+        @endunless
     </table>
 </div>
 
@@ -127,6 +133,7 @@
                 {{ $pedido->data_vencimento ? $pedido->data_vencimento->format('d/m/Y') : '—' }}
             </div>
         </div>
+        @unless($semValores ?? false)
         @if($pedido->banco)
         <div class="field">
             <div class="field-label">Banco</div>
@@ -145,6 +152,7 @@
             <div class="field-value">{{ $pedido->recorrencia_dias }} dias</div>
         </div>
         @endif
+        @endunless
     </div>
 </div>
 
