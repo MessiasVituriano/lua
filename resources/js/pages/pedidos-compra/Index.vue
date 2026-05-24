@@ -103,7 +103,7 @@
                                 <router-link v-if="p.status === 'pendente'" :to="{ name: 'pedidos-compra.edit', params: { id: p.id } }" class="btn btn-sm btn-outline-secondary me-1">
                                     <i class="bi bi-pencil"></i>
                                 </router-link>
-                                <a :href="`/api/pedidos-compra/${p.id}/pdf?sem_valores=1`" target="_blank" class="btn btn-sm btn-outline-secondary" title="PDF sem valores">
+                                <a :href="`/api/pedidos-compra/${p.id}/pdf?sem_valores=1`" target="_blank" class="btn btn-sm btn-outline-secondary" title="Ordem de compra (para fornecedor)">
                                     <i class="bi bi-file-earmark-pdf"></i>
                                 </a>
                             </td>

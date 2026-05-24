@@ -239,7 +239,9 @@ class PedidoCompraController extends Controller
 
         $semValores = $request->boolean('sem_valores');
         $filename   = 'pedido-compra-' . str_pad($pedidoCompra->id, 6, '0', STR_PAD_LEFT);
-        $titulo     = 'Pedido de Compra #' . str_pad($pedidoCompra->id, 6, '0', STR_PAD_LEFT);
+        $titulo     = $semValores
+            ? 'Ordem de Compra #' . str_pad($pedidoCompra->id, 6, '0', STR_PAD_LEFT)
+            : 'Pedido de Compra #' . str_pad($pedidoCompra->id, 6, '0', STR_PAD_LEFT);
 
         return $pdfService->stream(
             'pdf.pedido-compra',
