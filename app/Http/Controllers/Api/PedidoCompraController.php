@@ -9,6 +9,7 @@ use App\Models\Pagamento;
 use App\Models\PedidoCompra;
 use App\Models\PedidoCompraItem;
 use App\Models\Produto;
+use App\Services\PdfService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -230,6 +231,16 @@ class PedidoCompraController extends Controller
             DB::rollBack();
             throw $e;
         }
+    }
+
+    public function pdf(PedidoCompra $pedidoCompra, PdfService $pdfService): \Illuminate\Http\Response
+    {
+        $pedidoCompra->load(['loja', 'fornecedor', 'banco', 'itens.produto', 'usuario']);
+
+        $filename = 'pedido-compra-' . str_pad($pedidoCompra->id, 6, '0', STR_PAD_LEFT);
+        $titulo   = 'Pedido de Compra #' . str_pad($pedidoCompra->id, 6, '0', STR_PAD_LEFT);
+
+        return $pdfService->stream('pdf.pedido-compra', ['pedido' => $pedidoCompra], $filename, $titulo);
     }
 
     private function salvarItens(PedidoCompra $pedido, array $itens): float

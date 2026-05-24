@@ -154,5 +154,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('pedidos-compra/{pedidoCompra}/confirmar', [PedidoCompraController::class, 'confirmar']);
         Route::post('pedidos-compra/{pedidoCompra}/confirmar-entrega', [PedidoCompraController::class, 'confirmarEntrega']);
         Route::post('pedidos-compra/{pedidoCompra}/cancelar', [PedidoCompraController::class, 'cancelar']);
+        Route::get('pedidos-compra/{pedidoCompra}/pdf', [PedidoCompraController::class, 'pdf']);
     });
 });

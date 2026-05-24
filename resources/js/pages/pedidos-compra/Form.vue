@@ -21,6 +21,9 @@
                         <button v-if="pedido.status === 'pendente' || pedido.status === 'confirmado'" class="btn btn-sm btn-outline-danger" @click="cancelar">
                             <i class="bi bi-x-lg"></i> Cancelar
                         </button>
+                        <a :href="`/api/pedidos-compra/${pedido.id}/pdf`" target="_blank" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        </a>
                     </div>
                 </div>
 
