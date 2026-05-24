@@ -218,6 +218,55 @@ class PagamentoController extends Controller
         return response()->json($pagamento->fresh()->load(['fornecedor', 'banco']));
     }
 
+    public function pdf(Request $request, \App\Services\PdfService $pdfService): \Illuminate\Http\Response
+    {
+        $lojaId = auth()->user()->loja_id;
+
+        $query = Pagamento::with(['fornecedor', 'banco'])
+            ->where('loja_id', $lojaId);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('categoria')) {
+            $query->where('categoria', $request->categoria);
+        }
+        if ($request->filled('fornecedor_id')) {
+            $query->where('fornecedor_id', $request->fornecedor_id);
+        }
+        if ($request->filled('data_inicio')) {
+            $query->where('data_vencimento', '>=', $request->data_inicio);
+        }
+        if ($request->filled('data_fim')) {
+            $query->where('data_vencimento', '<=', $request->data_fim);
+        }
+
+        $pagamentos = $query->orderBy('data_vencimento')->get();
+
+        $totalGeral = (float) $pagamentos->sum('valor_total');
+        $totalPago  = (float) $pagamentos->sum('valor_pago');
+        $totais = [
+            'total_geral'    => $totalGeral,
+            'total_pago'     => $totalPago,
+            'total_pendente' => $totalGeral - $totalPago,
+            'count'          => $pagamentos->count(),
+        ];
+
+        $filtros = [
+            'data_inicio' => $request->data_inicio,
+            'data_fim'    => $request->data_fim,
+            'status'      => $request->status,
+            'categoria'   => $request->categoria,
+        ];
+
+        return $pdfService->stream(
+            'pdf.pagamentos',
+            compact('pagamentos', 'totais', 'filtros'),
+            'pagamentos',
+            'Pagamentos'
+        );
+    }
+
     public function alertas()
     {
         $lojaId = auth()->user()->loja_id;

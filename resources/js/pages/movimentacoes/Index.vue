@@ -126,6 +126,9 @@
                 <div class="col-md-4 d-flex gap-2">
                     <button class="btn btn-sm btn-lua" @click="applyFilters"><i class="bi bi-search"></i> Filtrar</button>
                     <button class="btn btn-sm btn-outline-secondary" @click="clearFilters">Limpar</button>
+                    <a :href="pdfUrl" target="_blank" class="btn btn-sm btn-outline-secondary" title="Exportar PDF">
+                        <i class="bi bi-file-earmark-pdf"></i> PDF
+                    </a>
                 </div>
             </div>
         </div>
@@ -225,6 +228,15 @@ const _now = new Date();
 const _mesInicio = new Date(_now.getFullYear(), _now.getMonth(), 1).toISOString().slice(0, 10);
 const _mesFim = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).toISOString().slice(0, 10);
 const filters = reactive({ tipo: '', status: '', data_inicio: _mesInicio, data_fim: _mesFim });
+
+const pdfUrl = computed(() => {
+    const p = new URLSearchParams();
+    if (filters.tipo) p.set('tipo', filters.tipo);
+    if (filters.status) p.set('status', filters.status);
+    if (filters.data_inicio) p.set('data_inicio', filters.data_inicio);
+    if (filters.data_fim) p.set('data_fim', filters.data_fim);
+    return '/api/movimentacoes-internas/pdf?' + p.toString();
+});
 const loadingSaldos = ref(false);
 const saldos = reactive({
     bancos: [],

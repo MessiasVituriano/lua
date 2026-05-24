@@ -46,6 +46,9 @@
                 <div class="col-12 col-md-4 d-flex gap-2 flex-wrap">
                     <button class="btn btn-sm btn-lua flex-grow-1 flex-md-grow-0" @click="load"><i class="bi bi-search"></i> Filtrar</button>
                     <button class="btn btn-sm btn-outline-secondary flex-grow-1 flex-md-grow-0" @click="clearFilters">Limpar</button>
+                    <a :href="pdfUrl" target="_blank" class="btn btn-sm btn-outline-secondary flex-grow-1 flex-md-grow-0" title="Exportar PDF">
+                        <i class="bi bi-file-earmark-pdf"></i> PDF
+                    </a>
                 </div>
             </div>
         </div>
@@ -186,7 +189,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import axios from 'axios';
 import { swalSuccess, swalError, swalConfirmDanger } from '../../utils/swal';
 const pagamentos = ref([]);
@@ -198,6 +201,15 @@ const hoje = new Date();
 const inicioMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10);
 const fimMesAtual = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().slice(0, 10);
 const filters = reactive({ status: '', categoria: '', data_inicio: inicioMesAtual, data_fim: fimMesAtual });
+
+const pdfUrl = computed(() => {
+    const p = new URLSearchParams();
+    if (filters.status) p.set('status', filters.status);
+    if (filters.categoria) p.set('categoria', filters.categoria);
+    if (filters.data_inicio) p.set('data_inicio', filters.data_inicio);
+    if (filters.data_fim) p.set('data_fim', filters.data_fim);
+    return '/api/pagamentos/pdf?' + p.toString();
+});
 const pagamentoSelecionado = ref(null);
 const pgForm = reactive({ valor_pago: '', forma_pagamento: '', banco_id: '', data_pagamento: new Date().toISOString().slice(0, 10) });
 const pgLoading = ref(false);

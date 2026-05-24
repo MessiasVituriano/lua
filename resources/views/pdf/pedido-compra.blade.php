@@ -4,43 +4,40 @@
 
 @if($semValores ?? false)
 
-{{-- ── Destinatário e referência ── --}}
+{{-- ── Destinatário + Dados da Ordem ── --}}
 <div class="section">
     <div class="section-title">Destinatário</div>
-    <div style="font-size: 16px; font-weight: bold; color: #1a1a2e; margin-bottom: 4px;">
-        {{ $pedido->fornecedor?->nome ?? '—' }}
-    </div>
-    @if($pedido->fornecedor?->telefone)
-    <div style="font-size: 10px; color: #6b7280;">{{ $pedido->fornecedor->telefone }}</div>
-    @endif
-</div>
-
-{{-- ── Dados da ordem ── --}}
-<div class="section">
-    <div class="section-title">Dados da Ordem</div>
-    <div class="fields-grid">
-        <div class="field">
-            <div class="field-label">Nº da Ordem</div>
-            <div class="field-value">#{{ str_pad($pedido->id, 6, '0', STR_PAD_LEFT) }}</div>
-        </div>
-        <div class="field">
-            <div class="field-label">Data de Emissão</div>
-            <div class="field-value">{{ $pedido->created_at->format('d/m/Y') }}</div>
-        </div>
-        <div class="field">
-            <div class="field-label">Prazo de Entrega Solicitado</div>
-            <div class="field-value">
-                {{ $pedido->data_estimativa_entrega ? $pedido->data_estimativa_entrega->format('d/m/Y') : '—' }}
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+            <div style="font-size: 16px; font-weight: bold; color: #1a1a2e; margin-bottom: 4px;">
+                {{ $pedido->fornecedor?->nome ?? '—' }}
             </div>
+            @if($pedido->fornecedor?->telefone)
+            <div style="font-size: 10px; color: #6b7280;">{{ $pedido->fornecedor->telefone }}</div>
+            @endif
         </div>
-        <div class="field half">
-            <div class="field-label">Solicitante</div>
-            <div class="field-value">{{ $pedido->usuario?->name ?? '—' }}</div>
-        </div>
-        <div class="field half">
-            <div class="field-label">Loja / Unidade</div>
-            <div class="field-value">{{ $pedido->loja?->nome ?? '—' }}</div>
-        </div>
+        <table style="font-size: 10px; color: #374151; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 2px 8px 2px 0; color: #6b7280; white-space: nowrap;">Nº da Ordem</td>
+                <td style="padding: 2px 0;">#{{ str_pad($pedido->id, 6, '0', STR_PAD_LEFT) }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 2px 8px 2px 0; color: #6b7280; white-space: nowrap;">Emissão</td>
+                <td style="padding: 2px 0;">{{ $pedido->created_at->format('d/m/Y') }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 2px 8px 2px 0; color: #6b7280; white-space: nowrap;">Prazo solicitado</td>
+                <td style="padding: 2px 0;">{{ $pedido->data_estimativa_entrega ? $pedido->data_estimativa_entrega->format('d/m/Y') : '—' }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 2px 8px 2px 0; color: #6b7280; white-space: nowrap;">Solicitante</td>
+                <td style="padding: 2px 0;">{{ $pedido->usuario?->name ?? '—' }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 2px 8px 2px 0; color: #6b7280; white-space: nowrap;">Loja / Unidade</td>
+                <td style="padding: 2px 0;">{{ $pedido->loja?->nome ?? '—' }}</td>
+            </tr>
+        </table>
     </div>
 </div>
 
@@ -75,19 +72,6 @@
 </div>
 @endif
 
-{{-- ── Assinatura ── --}}
-<div style="margin-top: 40px; display: flex; justify-content: space-between;">
-    <div style="text-align: center; width: 45%;">
-        <div style="border-top: 1px solid #374151; padding-top: 6px; font-size: 9px; color: #6b7280;">
-            Responsável pelo Pedido
-        </div>
-    </div>
-    <div style="text-align: center; width: 45%;">
-        <div style="border-top: 1px solid #374151; padding-top: 6px; font-size: 9px; color: #6b7280;">
-            Recebido por (Fornecedor)
-        </div>
-    </div>
-</div>
 
 @else
 
@@ -102,7 +86,15 @@
         <div class="field">
             <div class="field-label">Status</div>
             <div class="field-value">
-                <span class="badge badge-{{ $pedido->status }}">
+                @php
+                    $statusStyle = match($pedido->status) {
+                        'confirmado' => 'background:#dbeafe;color:#1d4ed8;',
+                        'entregue'   => 'background:#d1fae5;color:#065f46;',
+                        'cancelado'  => 'background:#fee2e2;color:#991b1b;',
+                        default      => 'background:#f3f4f6;color:#374151;',
+                    };
+                @endphp
+                <span class="badge" style="{{ $statusStyle }}">
                     {{ \App\Models\PedidoCompra::STATUS[$pedido->status] ?? $pedido->status }}
                 </span>
             </div>
@@ -236,6 +228,55 @@
         @endif
     </div>
 </div>
+
+{{-- ── Pagamentos registrados ── --}}
+@if($pedido->pagamentos->count())
+<div class="section">
+    <div class="section-title">Pagamentos</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Vencimento</th>
+                <th>Pagamento</th>
+                <th>Forma</th>
+                <th>Banco</th>
+                <th class="text-right">Valor Total</th>
+                <th class="text-right">Valor Pago</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($pedido->pagamentos as $pag)
+            @php
+                $pagStatusStyle = match($pag->status) {
+                    'pago'    => 'background:#d1fae5;color:#065f46;',
+                    'atrasado'=> 'background:#fee2e2;color:#991b1b;',
+                    'parcial' => 'background:#fef3c7;color:#92400e;',
+                    default   => 'background:#f3f4f6;color:#374151;',
+                };
+            @endphp
+            <tr>
+                <td>{{ $pag->data_vencimento ? $pag->data_vencimento->format('d/m/Y') : '—' }}</td>
+                <td>{{ $pag->data_pagamento ? $pag->data_pagamento->format('d/m/Y') : '—' }}</td>
+                <td>{{ $pag->forma_pagamento ?? '—' }}</td>
+                <td>{{ $pag->banco?->nome ?? '—' }}</td>
+                <td class="text-right">R$ {{ number_format($pag->valor_total, 2, ',', '.') }}</td>
+                <td class="text-right">R$ {{ number_format($pag->valor_pago, 2, ',', '.') }}</td>
+                <td><span class="badge" style="{{ $pagStatusStyle }}">{{ ucfirst($pag->status) }}</span></td>
+            </tr>
+            @endforeach
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4" class="text-right">Total</td>
+                <td class="text-right">R$ {{ number_format($pedido->pagamentos->sum('valor_total'), 2, ',', '.') }}</td>
+                <td class="text-right">R$ {{ number_format($pedido->pagamentos->sum('valor_pago'), 2, ',', '.') }}</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+@endif
 
 {{-- ── Observação ── --}}
 @if($pedido->observacao)

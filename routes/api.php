@@ -32,6 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('caixa/hoje', [CaixaController::class, 'hoje']);
     Route::post('caixa/abrir', [CaixaController::class, 'abrir']);
     Route::get('caixa/historico', [CaixaController::class, 'historico']);
+    Route::get('caixa/historico/pdf', [CaixaController::class, 'historicoPdf']);
     Route::get('caixa/clientes-com-pets', [CaixaController::class, 'clientesComPets']);
     Route::post('caixa/clientes-com-pets', [CaixaController::class, 'criarClienteComPet']);
     Route::get('caixa/{caixa}', [CaixaController::class, 'show'])->where('caixa', '[0-9]+');
@@ -68,6 +69,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Movimentacoes Internas (CRUD para todos, aprovacao admin via middleware no controller)
     Route::get('movimentacoes-internas-saldos', [MovimentacaoInternaController::class, 'saldos']);
+    Route::get('movimentacoes-internas/pdf', [MovimentacaoInternaController::class, 'pdf']);
     Route::apiResource('movimentacoes-internas', MovimentacaoInternaController::class);
     Route::post('movimentacoes-internas/{movimentacoes_interna}/aprovar', [MovimentacaoInternaController::class, 'aprovar']);
     Route::post('movimentacoes-internas/{movimentacoes_interna}/rejeitar', [MovimentacaoInternaController::class, 'rejeitar']);
@@ -134,6 +136,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('lojas-list', [UsuarioController::class, 'lojasList']);
 
         // Pagamentos (completo)
+        Route::get('pagamentos/pdf', [PagamentoController::class, 'pdf']);
         Route::apiResource('pagamentos', PagamentoController::class);
         Route::post('pagamentos/{pagamento}/pagar', [PagamentoController::class, 'registrarPagamento']);
 

@@ -12,6 +12,7 @@
             font-size: 11px;
             color: #1a1a2e;
             background: #fff;
+            margin: 32px;
         }
 
         /* ── Cabeçalho ── */

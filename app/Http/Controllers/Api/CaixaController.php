@@ -13,6 +13,7 @@ use App\Models\MovimentacaoEstoque;
 use App\Models\Pet;
 use App\Models\PlanoMaquininha;
 use App\Models\Produto;
+use App\Services\PdfService;
 use Carbon\Carbon;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,7 @@ class CaixaController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('role:admin')->only(['historico', 'autorizar', 'reabrir', 'atualizarEntrada']);
+        $this->middleware('role:admin')->only(['historico', 'historicoPdf', 'autorizar', 'reabrir', 'atualizarEntrada']);
     }
 
     public function hoje()
@@ -363,6 +364,46 @@ class CaixaController extends Controller
         $paginated['totais'] = $totais;
 
         return response()->json($paginated);
+    }
+
+    public function historicoPdf(Request $request, PdfService $pdfService): \Illuminate\Http\Response
+    {
+        $lojaId = auth()->user()->loja_id;
+
+        $query = CaixaDiario::with(['fechadoPor'])
+            ->where('loja_id', $lojaId)
+            ->orderByDesc('data');
+
+        if ($request->filled('data_inicio')) {
+            $query->where('data', '>=', $request->data_inicio);
+        }
+        if ($request->filled('data_fim')) {
+            $query->where('data', '<=', $request->data_fim);
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $caixas = $query->get();
+        $totais = [
+            'total_entradas' => (float) $caixas->sum('total_entradas'),
+            'total_saidas'   => (float) $caixas->sum('total_saidas'),
+            'saldo'          => (float) $caixas->sum('saldo'),
+            'count'          => $caixas->count(),
+        ];
+
+        $filtros = [
+            'data_inicio' => $request->data_inicio,
+            'data_fim'    => $request->data_fim,
+            'status'      => $request->status,
+        ];
+
+        return $pdfService->stream(
+            'pdf.caixa-historico',
+            compact('caixas', 'totais', 'filtros'),
+            'historico-caixa',
+            'Histórico de Caixa'
+        );
     }
 
     public function show(CaixaDiario $caixa)

@@ -130,6 +130,43 @@ class MovimentacaoInternaController extends Controller
         );
     }
 
+    public function pdf(Request $request, \App\Services\PdfService $pdfService): \Illuminate\Http\Response
+    {
+        $lojaId = auth()->user()->loja_id;
+
+        $query = MovimentacaoInterna::with(['bancoOrigem', 'bancoDestino', 'lojaDestino', 'solicitadoPor'])
+            ->where('loja_id', $lojaId);
+
+        if ($request->filled('tipo')) {
+            $query->where('tipo', $request->tipo);
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('data_inicio')) {
+            $query->where('data_movimentacao', '>=', $request->data_inicio);
+        }
+        if ($request->filled('data_fim')) {
+            $query->where('data_movimentacao', '<=', $request->data_fim);
+        }
+
+        $movimentacoes = $query->orderByDesc('data_movimentacao')->orderByDesc('id')->get();
+
+        $filtros = [
+            'data_inicio' => $request->data_inicio,
+            'data_fim'    => $request->data_fim,
+            'tipo'        => $request->tipo,
+            'status'      => $request->status,
+        ];
+
+        return $pdfService->stream(
+            'pdf.movimentacoes',
+            compact('movimentacoes', 'filtros'),
+            'movimentacoes',
+            'Movimentações'
+        );
+    }
+
     public function pendentes()
     {
         $lojaId = auth()->user()->loja_id;

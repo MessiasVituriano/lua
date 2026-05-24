@@ -235,7 +235,7 @@ class PedidoCompraController extends Controller
 
     public function pdf(PedidoCompra $pedidoCompra, PdfService $pdfService, Request $request): \Illuminate\Http\Response
     {
-        $pedidoCompra->load(['loja', 'fornecedor', 'banco', 'itens.produto', 'usuario']);
+        $pedidoCompra->load(['loja', 'fornecedor', 'banco', 'itens.produto', 'usuario', 'pagamentos.banco']);
 
         $semValores = $request->boolean('sem_valores');
         $filename   = 'pedido-compra-' . str_pad($pedidoCompra->id, 6, '0', STR_PAD_LEFT);

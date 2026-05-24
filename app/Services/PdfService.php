@@ -23,7 +23,7 @@ class PdfService
 
         $shared = [
             'lojaNome'    => $loja?->nome ?? 'LUA PetShop',
-            'usuarioNome' => $user?->nome ?? '',
+            'usuarioNome' => $user?->name ?? '',
             'geradoEm'    => now()->format('d/m/Y \à\s H:i'),
             'titulo'      => $title,
         ];
@@ -49,7 +49,7 @@ class PdfService
 
         $shared = [
             'lojaNome'    => $loja?->nome ?? 'LUA PetShop',
-            'usuarioNome' => $user?->nome ?? '',
+            'usuarioNome' => $user?->name ?? '',
             'geradoEm'    => now()->format('d/m/Y \à\s H:i'),
             'titulo'      => $title,
         ];

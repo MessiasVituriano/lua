@@ -23,6 +23,9 @@
                 <div class="col-12 col-md-4 d-flex gap-2 flex-wrap">
                     <button class="btn btn-sm btn-lua flex-grow-1 flex-md-grow-0" @click="load"><i class="bi bi-search"></i> Filtrar</button>
                     <button class="btn btn-sm btn-outline-secondary flex-grow-1 flex-md-grow-0" @click="clearFilters">Limpar</button>
+                    <a :href="pdfUrl" target="_blank" class="btn btn-sm btn-outline-secondary flex-grow-1 flex-md-grow-0" title="Exportar PDF">
+                        <i class="bi bi-file-earmark-pdf"></i> PDF
+                    </a>
                     <button v-if="userIsAdmin" class="btn btn-sm btn-outline-primary btn-retro flex-grow-1 flex-md-grow-0" @click="abrirModalRetro">
                         <i class="bi bi-calendar-plus"></i> Abrir caixa retroativo
                     </button>
@@ -169,6 +172,14 @@ const _now = new Date();
 const _mesInicio = new Date(_now.getFullYear(), _now.getMonth(), 1).toISOString().slice(0, 10);
 const _mesFim = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).toISOString().slice(0, 10);
 const filters = reactive({ data_inicio: _mesInicio, data_fim: _mesFim, status: '' });
+
+const pdfUrl = computed(() => {
+    const p = new URLSearchParams();
+    if (filters.data_inicio) p.set('data_inicio', filters.data_inicio);
+    if (filters.data_fim) p.set('data_fim', filters.data_fim);
+    if (filters.status) p.set('status', filters.status);
+    return '/api/caixa/historico/pdf?' + p.toString();
+});
 
 const modalRetroEl = ref(null);
 let modalRetroInstance = null;
