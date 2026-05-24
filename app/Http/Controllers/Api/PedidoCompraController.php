@@ -32,11 +32,11 @@ class PedidoCompraController extends Controller
         }
 
         if ($request->filled('data_inicio')) {
-            $query->where('data_estimativa_entrega', '>=', $request->data_inicio);
+            $query->whereDate('created_at', '>=', $request->data_inicio);
         }
 
         if ($request->filled('data_fim')) {
-            $query->where('data_estimativa_entrega', '<=', $request->data_fim);
+            $query->whereDate('created_at', '<=', $request->data_fim);
         }
 
         $lista = $query->orderByDesc('created_at')->get()->map(function ($pedido) use ($hoje) {

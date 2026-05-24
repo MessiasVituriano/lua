@@ -120,6 +120,10 @@
                                     <option v-for="n in 12" :key="n" :value="n">{{ n }}x</option>
                                 </select>
                             </div>
+                            <div v-if="pagForm.quantidade_parcelas > 1" class="col-md-4">
+                                <label class="form-label">Recorrência (dias)</label>
+                                <input type="number" min="1" class="form-control" v-model.number="pagForm.recorrencia_dias">
+                            </div>
                             <!-- 1 parcela: único input de data -->
                             <div v-if="pagForm.quantidade_parcelas === 1" class="col-md-4">
                                 <label class="form-label">Data de Vencimento</label>
@@ -270,6 +274,10 @@
                                     <option v-for="n in 12" :key="n" :value="n">{{ n }}x</option>
                                 </select>
                             </div>
+                            <div v-if="form.quantidade_parcelas > 1" class="col-md-4">
+                                <label class="form-label">Recorrência (dias)</label>
+                                <input type="number" min="1" class="form-control" v-model.number="form.recorrencia_dias">
+                            </div>
                             <!-- 1 parcela: único input de data -->
                             <div v-if="form.quantidade_parcelas === 1" class="col-md-4">
                                 <label class="form-label">Data de Vencimento</label>
@@ -369,9 +377,21 @@ watch(() => form.value.quantidade_parcelas, (n) => {
     form.value.datas_parcelas = buildDatas(n, base, form.value.recorrencia_dias);
 });
 
+watch(() => form.value.recorrencia_dias, (iv) => {
+    if (form.value.quantidade_parcelas <= 1) return;
+    const base = form.value.datas_parcelas?.[0] || todayStr();
+    form.value.datas_parcelas = buildDatas(form.value.quantidade_parcelas, base, iv);
+});
+
 watch(() => pagForm.value.quantidade_parcelas, (n) => {
     const base = pagForm.value.datas_parcelas?.[0] || todayStr();
     pagForm.value.datas_parcelas = buildDatas(n, base, pagForm.value.recorrencia_dias);
+});
+
+watch(() => pagForm.value.recorrencia_dias, (iv) => {
+    if (pagForm.value.quantidade_parcelas <= 1) return;
+    const base = pagForm.value.datas_parcelas?.[0] || todayStr();
+    pagForm.value.datas_parcelas = buildDatas(pagForm.value.quantidade_parcelas, base, iv);
 });
 
 const produtosFiltrados = computed(() => {
@@ -533,7 +553,7 @@ function fmt(v) {
 
 function fmtDate(d) {
     if (!d) return '—';
-    const [y, m, day] = d.split('-');
+    const [y, m, day] = d.split('T')[0].split('-');
     return `${day}/${m}/${y}`;
 }
 

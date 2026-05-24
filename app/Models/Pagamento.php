@@ -30,8 +30,8 @@ class Pagamento extends Model
     protected $casts = [
         'valor_total' => 'decimal:2',
         'valor_pago' => 'decimal:2',
-        'data_vencimento' => 'date',
-        'data_pagamento' => 'date',
+        'data_vencimento' => 'date:Y-m-d',
+        'data_pagamento' => 'date:Y-m-d',
         'recorrente' => 'boolean',
     ];
 

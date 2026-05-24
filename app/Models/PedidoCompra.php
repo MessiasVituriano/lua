@@ -34,9 +34,9 @@ class PedidoCompra extends Model
     ];
 
     protected $casts = [
-        'data_estimativa_entrega' => 'date',
-        'data_entrega' => 'date',
-        'data_vencimento' => 'date',
+        'data_estimativa_entrega' => 'date:Y-m-d',
+        'data_entrega' => 'date:Y-m-d',
+        'data_vencimento' => 'date:Y-m-d',
         'confirmado_em' => 'datetime',
         'entregue_em' => 'datetime',
         'cancelado_em' => 'datetime',
