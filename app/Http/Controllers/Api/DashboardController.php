@@ -221,6 +221,22 @@ class DashboardController extends Controller
             ->limit(10)
             ->get(['id', 'nome', 'categoria', 'estoque_atual', 'estoque_min', 'fornecedor_id']);
 
+        // ── Vendas por hora do dia ──
+        $vendasPorHoraRaw = EntradaCaixa::whereHas('caixaDiario', function ($q) use ($lojaId, $inicio, $fim) {
+                $q->where('loja_id', $lojaId)->whereBetween('data', [$inicio, $fim]);
+            })
+            ->selectRaw("EXTRACT(HOUR FROM created_at)::int as hora, SUM(valor) as total, COUNT(*) as quantidade")
+            ->groupBy('hora')
+            ->orderBy('hora')
+            ->get()
+            ->keyBy('hora');
+
+        $vendasPorHora = collect(range(0, 23))->map(fn ($h) => [
+            'hora'       => $h,
+            'total'      => (float) ($vendasPorHoraRaw[$h]->total ?? 0),
+            'quantidade' => (int)   ($vendasPorHoraRaw[$h]->quantidade ?? 0),
+        ])->values();
+
         return response()->json([
             // Cards
             'total_entradas' => (float) $totalEntradas,
@@ -265,6 +281,9 @@ class DashboardController extends Controller
             // Movimentacoes internas
             'movimentacoes_internas' => $movInternas,
             'movimentacoes_pendentes' => $movPendentes,
+
+            // Vendas por hora
+            'vendas_por_hora' => $vendasPorHora,
         ]);
     }
 }

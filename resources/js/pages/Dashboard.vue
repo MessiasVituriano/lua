@@ -183,6 +183,19 @@
                 </div>
             </div>
 
+            <!-- Vendas por hora do dia -->
+            <div class="card section-card">
+                <div class="section-header">
+                    <div>
+                        <h3 class="section-title">Vendas por hora do dia</h3>
+                        <p class="section-subtitle">Distribuição das entradas agrupadas por hora de lançamento</p>
+                    </div>
+                </div>
+                <div class="chart-wrap">
+                    <Bar v-if="barChartReady" :data="vendasHoraChartData" :options="vendasHoraChartOptions" />
+                </div>
+            </div>
+
             <!-- Gráfico saldo -->
             <div class="card section-card">
                 <div class="section-header">
@@ -799,8 +812,7 @@ const saldoCategoriaChartOptions = computed(() => ({
     },
 }));
 
-const saldoChartOptions = computed(() => ({
-    responsive: true,
+const saldoChartOptions = computed(() => ({    responsive: true,
     maintainAspectRatio: false,
     plugins: {
         legend: { display: false },
@@ -825,6 +837,101 @@ const saldoChartOptions = computed(() => ({
                 callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v/1000).toFixed(0) + 'k' : v),
             },
             grid: { color: gridColor.value, drawBorder: false },
+            border: { display: false },
+        },
+    },
+}));
+
+const vendasHoraChartData = computed(() => {
+    if (!d.value?.vendas_por_hora) return { labels: [], datasets: [] };
+    const horas = d.value.vendas_por_hora.filter(h => h.quantidade > 0);
+    const labels = horas.map(h => `${String(h.hora).padStart(2, '0')}h`);
+    return {
+        labels,
+        datasets: [
+            {
+                label: 'Total (R$)',
+                data: horas.map(h => h.total),
+                backgroundColor: '#6e56cf',
+                borderRadius: 4,
+                borderSkipped: false,
+                yAxisID: 'y',
+            },
+            {
+                label: 'Qtd. vendas',
+                data: horas.map(h => h.quantidade),
+                backgroundColor: '#059669',
+                borderRadius: 4,
+                borderSkipped: false,
+                yAxisID: 'y1',
+            },
+            {
+                label: 'Ticket médio (R$)',
+                data: horas.map(h => h.quantidade > 0 ? +(h.total / h.quantidade).toFixed(2) : 0),
+                backgroundColor: '#d97706',
+                borderRadius: 4,
+                borderSkipped: false,
+                yAxisID: 'y2',
+            },
+        ],
+    };
+});
+
+const vendasHoraChartOptions = computed(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            position: 'top',
+            align: 'end',
+            labels: { color: textColor.value, usePointStyle: true, pointStyle: 'circle', boxWidth: 6, boxHeight: 6, padding: 14, font: { size: 12 } },
+        },
+        tooltip: {
+            backgroundColor: isDark.value ? '#1e1b2d' : '#1c1917',
+            padding: 10,
+            cornerRadius: 6,
+            boxPadding: 4,
+            titleFont: { size: 12, weight: 500 },
+            bodyFont: { size: 12 },
+            callbacks: {
+                label: (ctx) => {
+                    if (ctx.datasetIndex === 0) return 'Total: R$ ' + Number(ctx.raw).toFixed(2).replace('.', ',');
+                    if (ctx.datasetIndex === 1) return 'Qtd: ' + ctx.raw;
+                    return 'Ticket médio: R$ ' + Number(ctx.raw).toFixed(2).replace('.', ',');
+                },
+            },
+        },
+    },
+    scales: {
+        x: { ticks: { color: textColor.value, font: { size: 11 } }, grid: { display: false } },
+        y: {
+            type: 'linear',
+            position: 'left',
+            ticks: {
+                color: '#6e56cf',
+                font: { size: 11 },
+                callback: (v) => 'R$ ' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v),
+            },
+            grid: { color: gridColor.value, drawBorder: false },
+            border: { display: false },
+        },
+        y1: {
+            type: 'linear',
+            position: 'right',
+            display: false,
+            ticks: { color: '#059669', font: { size: 11 }, stepSize: 1 },
+            grid: { display: false },
+            border: { display: false },
+        },
+        y2: {
+            type: 'linear',
+            position: 'right',
+            ticks: {
+                color: '#d97706',
+                font: { size: 11 },
+                callback: (v) => 'R$ ' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v),
+            },
+            grid: { display: false },
             border: { display: false },
         },
     },

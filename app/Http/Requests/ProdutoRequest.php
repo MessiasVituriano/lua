@@ -21,6 +21,7 @@ class ProdutoRequest extends FormRequest
             'valor_custo' => ['required', 'numeric', 'min:0.01'],
             'margem' => ['required', 'numeric', 'min:0'],
             'estoque_min' => ['nullable', 'integer', 'min:0'],
+            'peso_unitario_gramas' => ['nullable', 'integer', 'min:1'],
             'ativo' => ['boolean'],
         ];
     }

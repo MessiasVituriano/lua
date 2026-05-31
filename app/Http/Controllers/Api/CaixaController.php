@@ -216,7 +216,7 @@ class CaixaController extends Controller
 
                 $produtos = Produto::query()
                     ->whereIn('id', $produtoIds)
-                    ->get(['id', 'categoria', 'estoque_atual'])
+                    ->get(['id', 'categoria', 'estoque_atual', 'peso_unitario_gramas'])
                     ->keyBy('id');
 
                 foreach ($itens as $item) {
@@ -576,7 +576,7 @@ class CaixaController extends Controller
 
         $produtos = Produto::query()
             ->whereIn('id', $produtoIds)
-            ->get(['id', 'categoria', 'valor_venda', 'estoque_atual', 'nome'])
+            ->get(['id', 'categoria', 'valor_venda', 'estoque_atual', 'nome', 'peso_unitario_gramas'])
             ->keyBy('id');
 
         $pets = Pet::query()
@@ -737,8 +737,18 @@ class CaixaController extends Controller
 
     private function resolverQuantidadeSaidaParaEstoque(Produto $produto, array $item): int
     {
-        if ($produto->categoria === 'racao' && !empty($item['peso_gramas'])) {
-            return max((int) $item['peso_gramas'], 0);
+        $ehRacao = $produto->categoria === 'racao';
+
+        if ($ehRacao) {
+            // Granel: peso em gramas informado diretamente na venda
+            if (!empty($item['peso_gramas'])) {
+                return max((int) $item['peso_gramas'], 0);
+            }
+
+            // Saco fechado: usa o peso unitario cadastrado no produto × quantidade
+            if ($produto->peso_unitario_gramas) {
+                return max((int) round((float) ($item['quantidade'] ?? 0) * $produto->peso_unitario_gramas), 0);
+            }
         }
 
         return max((int) round((float) ($item['quantidade'] ?? 0)), 0);

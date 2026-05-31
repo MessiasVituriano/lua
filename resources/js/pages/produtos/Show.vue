@@ -38,6 +38,10 @@
                             <small v-if="produto.estoque_min !== null" class="text-muted fs-6">(min: {{ isRacao ? fmtGramas(produto.estoque_min) : produto.estoque_min }})</small>
                         </div>
                     </div>
+                    <div v-if="isRacao && produto.peso_unitario_gramas" class="mb-2">
+                        <span class="text-muted small">Peso por unidade</span>
+                        <div class="fw-semibold">{{ fmtGramas(produto.peso_unitario_gramas) }} / unidade</div>
+                    </div>
                     <div class="d-flex gap-2 mt-2">
                         <router-link v-if="isAdmin" :to="{ name: 'produtos.edit', params: { id: produto.id } }" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-pencil"></i> Editar
@@ -58,8 +62,11 @@
                         </select>
                     </div>
                     <div class="mb-2">
-                        <input type="number" min="1" class="form-control form-control-sm" v-model="movForm.quantidade" :placeholder="isRacao ? 'Quantidade (gramas)' : 'Quantidade'">
-                        <div v-if="isRacao" class="form-text text-muted">Para racao, informe o peso em gramas (ex: 15kg = 15000g)</div>
+                        <template v-if="isRacao">
+                            <input type="number" step="0.001" min="0.001" class="form-control form-control-sm" v-model="movKg" placeholder="Quantidade em kg (ex: 15 = 15 kg)">
+                            <div class="form-text">Informe em kg. Ex: 15 = 15&nbsp;kg = 15.000&nbsp;g</div>
+                        </template>
+                        <input v-else type="number" min="1" class="form-control form-control-sm" v-model="movForm.quantidade" placeholder="Quantidade">
                     </div>
                     <div class="mb-2">
                         <input type="text" class="form-control form-control-sm" v-model="movForm.motivo" placeholder="Motivo (opcional)">
@@ -124,9 +131,10 @@ const isAdmin = computed(() => auth.user?.role === 'admin');
 const produto = ref(null);
 const movimentacoes = ref([]);
 const movForm = reactive({ tipo: 'entrada', quantidade: '', motivo: '' });
+const movKg = ref('');
 const movLoading = ref(false);
 const categorias = { racao: 'Ração', racao_umida: 'Ração Úmida', medicamento: 'Medicamento', acessorio: 'Acessório', higiene: 'Higiene', petisco: 'Petisco' };
-const isRacao = computed(() => produto.value?.categoria === 'racao' || produto.value?.categoria === 'racao_umida');
+const isRacao = computed(() => produto.value?.categoria === 'racao');
 const estoqueAlert = computed(() => produto.value && produto.value.estoque_min !== null && produto.value.estoque_atual <= produto.value.estoque_min);
 
 async function loadProduto() {
@@ -140,11 +148,15 @@ async function loadMovs() {
 }
 
 async function registrarMov() {
-    if (!movForm.quantidade || movForm.quantidade < 1) return;
+    const quantidade = isRacao.value
+        ? Math.round(parseFloat(movKg.value) * 1000)
+        : parseInt(movForm.quantidade);
+    if (!quantidade || quantidade < 1) return;
     movLoading.value = true;
     try {
-        await axios.post('/produtos/' + route.params.id + '/movimentacao', movForm);
+        await axios.post('/produtos/' + route.params.id + '/movimentacao', { ...movForm, quantidade });
         movForm.quantidade = '';
+        movKg.value = '';
         movForm.motivo = '';
         await Promise.all([loadProduto(), loadMovs()]);
         swalSuccess('Movimentacao registrada.');

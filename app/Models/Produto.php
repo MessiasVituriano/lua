@@ -20,6 +20,7 @@ class Produto extends Model
         'valor_venda',
         'estoque_atual',
         'estoque_min',
+        'peso_unitario_gramas',
         'ativo',
     ];
 

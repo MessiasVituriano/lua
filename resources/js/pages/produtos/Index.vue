@@ -134,7 +134,7 @@ async function destroy(p) {
 }
 
 function fmt(v) { return Number(v || 0).toFixed(2).replace('.', ','); }
-function isRacao(p) { return p.categoria === 'racao' || p.categoria === 'racao_umida'; }
+function isRacao(p) { return p.categoria === 'racao'; }
 function fmtGramas(g) {
     const n = Number(g || 0);
     if (Math.abs(n) >= 1000) return (n / 1000).toFixed(3).replace('.', ',').replace(/,?0+$/, '') + ' kg';

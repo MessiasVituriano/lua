@@ -43,9 +43,28 @@
                             <input type="number" step="0.01" min="0" class="form-control" v-model="valorVendaCalc" @input="calcularMargem">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Estoque Minimo</label>
-                            <input type="number" min="0" class="form-control" v-model="form.estoque_min">
+                            <label class="form-label">
+                                Estoque Mínimo
+                                <span v-if="isRacaoForm" class="text-muted" style="font-size:0.75rem">(kg)</span>
+                            </label>
+                            <input v-if="isRacaoForm" type="number" step="0.001" min="0" class="form-control" v-model="estoque_min_kg" placeholder="Ex: 5 = 5 kg">
+                            <input v-else type="number" min="0" class="form-control" v-model="form.estoque_min">
                         </div>
+
+                        <!-- Peso por unidade: só para ração em saco fechado -->
+                        <template v-if="isRacaoForm">
+                            <div class="col-12">
+                                <label class="form-label">
+                                    Peso por unidade (kg)
+                                    <span class="text-muted" style="font-size:0.75rem">— preencha para saco fechado; deixe vazio para venda a granel</span>
+                                </label>
+                                <input type="number" step="0.001" min="0.001" class="form-control" v-model="peso_unitario_kg" placeholder="Ex: 15 = saco de 15 kg">
+                                <div class="form-text">
+                                    Se preenchido, cada unidade vendida desconta esse peso do estoque automaticamente.
+                                    Deixe vazio para produtos vendidos a granel (o peso é informado na venda).
+                                </div>
+                            </div>
+                        </template>
                     </div>
 
                     <div v-if="isEdit" class="mt-3">
@@ -87,6 +106,12 @@ const form = reactive({
     valor_custo: '', margem: '', estoque_min: '', ativo: true,
 });
 
+// Campos em kg para ração (convertidos de/para gramas na API)
+const estoque_min_kg = ref('');
+const peso_unitario_kg = ref('');
+
+const isRacaoForm = computed(() => form.categoria === 'racao');
+
 const valorVendaCalc = ref(0);
 
 function calcularVenda() {
@@ -111,6 +136,12 @@ onMounted(async () => {
         const { data: prod } = await axios.get('/produtos/' + route.params.id);
         Object.keys(form).forEach(k => { if (prod[k] !== null && prod[k] !== undefined) form[k] = prod[k]; });
         calcularVenda();
+
+        const ehRacao = prod.categoria === 'racao';
+        if (ehRacao) {
+            estoque_min_kg.value = prod.estoque_min != null ? +(prod.estoque_min / 1000).toFixed(3) : '';
+            peso_unitario_kg.value = prod.peso_unitario_gramas != null ? +(prod.peso_unitario_gramas / 1000).toFixed(3) : '';
+        }
     }
 });
 
@@ -120,7 +151,19 @@ async function save() {
     try {
         const payload = { ...form };
         if (!payload.fornecedor_id) payload.fornecedor_id = null;
-        if (!payload.estoque_min && payload.estoque_min !== 0) payload.estoque_min = null;
+
+        if (isRacaoForm.value) {
+            // Converte kg → gramas (inteiro)
+            payload.estoque_min = estoque_min_kg.value !== '' && estoque_min_kg.value !== null
+                ? Math.round(parseFloat(estoque_min_kg.value) * 1000)
+                : null;
+            payload.peso_unitario_gramas = peso_unitario_kg.value !== '' && peso_unitario_kg.value !== null && parseFloat(peso_unitario_kg.value) > 0
+                ? Math.round(parseFloat(peso_unitario_kg.value) * 1000)
+                : null;
+        } else {
+            if (!payload.estoque_min && payload.estoque_min !== 0) payload.estoque_min = null;
+            payload.peso_unitario_gramas = null;
+        }
 
         if (isEdit.value) {
             await axios.put('/produtos/' + route.params.id, payload);
