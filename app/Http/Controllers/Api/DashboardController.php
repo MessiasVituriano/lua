@@ -225,7 +225,7 @@ class DashboardController extends Controller
         $vendasPorHoraRaw = EntradaCaixa::whereHas('caixaDiario', function ($q) use ($lojaId, $inicio, $fim) {
                 $q->where('loja_id', $lojaId)->whereBetween('data', [$inicio, $fim]);
             })
-            ->selectRaw("EXTRACT(HOUR FROM created_at)::int as hora, SUM(valor) as total, COUNT(*) as quantidade")
+            ->selectRaw("EXTRACT(HOUR FROM (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo'))::int as hora, SUM(valor) as total, COUNT(*) as quantidade")
             ->groupBy('hora')
             ->orderBy('hora')
             ->get()
