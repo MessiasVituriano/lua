@@ -43,67 +43,6 @@
         </div>
 
         <template v-if="d && !loading">
-            <!-- KPIs -->
-            <div class="kpi-grid">
-                <div class="kpi">
-                    <div class="kpi-label">
-                        <TrendingUp :size="14" class="kpi-icon success" />
-                        Total Entradas
-                    </div>
-                    <div class="kpi-value num-tabular">R$ {{ fmt(d.total_entradas) }}</div>
-                    <div class="kpi-delta" :class="varClass(d.total_entradas, d.entradas_anterior)">
-                        {{ varPercent(d.total_entradas, d.entradas_anterior) }}
-                        <span class="kpi-delta-label">vs período anterior</span>
-                    </div>
-                </div>
-
-                <div class="kpi">
-                    <div class="kpi-label">
-                        <TrendingDown :size="14" class="kpi-icon danger" />
-                        Total Saídas
-                    </div>
-                    <div class="kpi-value num-tabular">R$ {{ fmt(d.total_saidas) }}</div>
-                    <div class="kpi-delta" :class="varClassInv(d.total_saidas, d.saidas_anterior)">
-                        {{ varPercent(d.total_saidas, d.saidas_anterior) }}
-                        <span class="kpi-delta-label">vs período anterior</span>
-                    </div>
-                </div>
-
-                <div class="kpi">
-                    <div class="kpi-label">
-                        <Wallet :size="14" class="kpi-icon primary" />
-                        Saldo
-                    </div>
-                    <div class="kpi-value num-tabular" :class="d.saldo >= 0 ? 'text-primary' : 'text-danger'">
-                        R$ {{ fmt(d.saldo) }}
-                    </div>
-                    <div class="kpi-delta-label">Receitas menos despesas</div>
-                </div>
-
-                <div class="kpi">
-                    <div class="kpi-label">
-                        <Bell :size="14" class="kpi-icon warning" />
-                        Alertas
-                    </div>
-                    <div class="kpi-alert-list">
-                        <div class="kpi-alert-row">
-                            <span class="badge bg-danger">{{ d.pagamentos_atrasados }}</span>
-                            <span>atrasados</span>
-                            <span class="ms-auto fw-semibold num-tabular text-danger">R$ {{ fmt(d.total_pagamentos_atrasados) }}</span>
-                        </div>
-                        <div class="kpi-alert-row">
-                            <span class="badge bg-warning">{{ d.pagamentos_pendentes }}</span>
-                            <span>pendentes</span>
-                            <span class="ms-auto fw-semibold num-tabular text-warning">R$ {{ fmt(d.total_pagamentos_pendentes) }}</span>
-                        </div>
-                        <div class="kpi-alert-row">
-                            <span class="badge bg-info">{{ d.estoque_baixo }}</span>
-                            <span>estoque baixo</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Metas (Resumo) -->
             <div v-if="isAdmin" class="card section-card meta-panel">
                 <div class="section-header">
@@ -165,6 +104,67 @@
                         </div>
                         <div class="chart-wrap small mt-3">
                             <Bar v-if="metaChartReady && metaSaldoChartData.labels.length" :data="metaSaldoChartData" :options="metaChartOptions" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPIs -->
+            <div class="kpi-grid">
+                <div class="kpi">
+                    <div class="kpi-label">
+                        <TrendingUp :size="14" class="kpi-icon success" />
+                        Total Entradas
+                    </div>
+                    <div class="kpi-value num-tabular">R$ {{ fmt(d.total_entradas) }}</div>
+                    <div class="kpi-delta" :class="varClass(d.total_entradas, d.entradas_anterior)">
+                        {{ varPercent(d.total_entradas, d.entradas_anterior) }}
+                        <span class="kpi-delta-label">vs período anterior</span>
+                    </div>
+                </div>
+
+                <div class="kpi">
+                    <div class="kpi-label">
+                        <TrendingDown :size="14" class="kpi-icon danger" />
+                        Total Saídas
+                    </div>
+                    <div class="kpi-value num-tabular">R$ {{ fmt(d.total_saidas) }}</div>
+                    <div class="kpi-delta" :class="varClassInv(d.total_saidas, d.saidas_anterior)">
+                        {{ varPercent(d.total_saidas, d.saidas_anterior) }}
+                        <span class="kpi-delta-label">vs período anterior</span>
+                    </div>
+                </div>
+
+                <div class="kpi">
+                    <div class="kpi-label">
+                        <Wallet :size="14" class="kpi-icon primary" />
+                        Saldo
+                    </div>
+                    <div class="kpi-value num-tabular" :class="d.saldo >= 0 ? 'text-primary' : 'text-danger'">
+                        R$ {{ fmt(d.saldo) }}
+                    </div>
+                    <div class="kpi-delta-label">Receitas menos despesas</div>
+                </div>
+
+                <div class="kpi">
+                    <div class="kpi-label">
+                        <Bell :size="14" class="kpi-icon warning" />
+                        Alertas
+                    </div>
+                    <div class="kpi-alert-list">
+                        <div class="kpi-alert-row">
+                            <span class="badge bg-danger">{{ d.pagamentos_atrasados }}</span>
+                            <span>atrasados</span>
+                            <span class="ms-auto fw-semibold num-tabular text-danger">R$ {{ fmt(d.total_pagamentos_atrasados) }}</span>
+                        </div>
+                        <div class="kpi-alert-row">
+                            <span class="badge bg-warning">{{ d.pagamentos_pendentes }}</span>
+                            <span>pendentes</span>
+                            <span class="ms-auto fw-semibold num-tabular text-warning">R$ {{ fmt(d.total_pagamentos_pendentes) }}</span>
+                        </div>
+                        <div class="kpi-alert-row">
+                            <span class="badge bg-info">{{ d.estoque_baixo }}</span>
+                            <span>estoque baixo</span>
                         </div>
                     </div>
                 </div>
