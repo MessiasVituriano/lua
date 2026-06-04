@@ -21,9 +21,14 @@
                     <i class="bi bi-chevron-right"></i>
                 </button>
             </div>
-            <button class="btn btn-sm btn-lua" @click="abrirNovo()">
-                <i class="bi bi-plus-lg me-1"></i>Novo Agendamento
-            </button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-lua" @click="abrirModalLink">
+                    <i class="bi bi-link-45deg me-1"></i>Gerar Link
+                </button>
+                <button class="btn btn-sm btn-lua" @click="abrirNovo()">
+                    <i class="bi bi-plus-lg me-1"></i>Novo Agendamento
+                </button>
+            </div>
         </div>
 
         <!-- ── VISÃO MENSAL ─────────────────────────────────────── -->
@@ -254,6 +259,63 @@
                         <button type="button" class="btn btn-sm btn-lua" @click="salvarAgendamento" :disabled="salvando">
                             <span v-if="salvando" class="spinner-border spinner-border-sm me-1" role="status"></span>
                             {{ editingId ? 'Salvar alterações' : 'Agendar' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ── MODAL LINK DE AGENDAMENTO ──────────────────────────── -->
+        <div class="modal fade" ref="modalLinkRef" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-md">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-link-45deg me-2"></i>Gerar link de agendamento
+                        </h5>
+                        <button type="button" class="btn-close" @click="fecharModalLink"></button>
+                    </div>
+
+                    <!-- Passo 1: selecionar cliente -->
+                    <div v-if="linkState === 'selecionando'" class="modal-body">
+                        <p class="text-muted small mb-3">
+                            O link ficará ativo por <strong>24 horas</strong> e permite que o tutor escolha um horário disponível sem precisar de login.
+                        </p>
+                        <label class="form-label small">Cliente (opcional)</label>
+                        <select class="form-select form-select-sm" v-model="linkClienteId">
+                            <option value="">-- Sem cliente pré-selecionado --</option>
+                            <option v-for="c in clientes" :key="c.id" :value="c.id">{{ c.nome }}</option>
+                        </select>
+                        <div class="form-text">Se informado, o nome e os pets do cliente já virão preenchidos no link.</div>
+                    </div>
+                    <div v-if="linkState === 'selecionando'" class="modal-footer">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @click="fecharModalLink">Cancelar</button>
+                        <button type="button" class="btn btn-sm btn-lua" @click="gerarLink" :disabled="gerandoLink">
+                            <span v-if="gerandoLink" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            <i v-else class="bi bi-link-45deg me-1"></i>Gerar link
+                        </button>
+                    </div>
+
+                    <!-- Passo 2: mostrar link gerado -->
+                    <div v-if="linkState === 'gerado'" class="modal-body">
+                        <div class="alert alert-success d-flex align-items-center gap-2 mb-3">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span>Link criado! Válido por 24 horas.</span>
+                        </div>
+                        <label class="form-label small fw-semibold">Link para compartilhar</label>
+                        <div class="input-group input-group-sm mb-2">
+                            <input type="text" class="form-control font-monospace" :value="linkGerado.url" readonly ref="linkInputRef">
+                            <button class="btn btn-outline-secondary" @click="copiarLink" :title="linkCopiado ? 'Copiado!' : 'Copiar'">
+                                <i :class="linkCopiado ? 'bi bi-check-lg text-success' : 'bi bi-clipboard'"></i>
+                            </button>
+                        </div>
+                        <div class="text-muted small">
+                            <i class="bi bi-clock me-1"></i>Expira em: {{ fmtDatetime(linkGerado.expires_at) }}
+                        </div>
+                    </div>
+                    <div v-if="linkState === 'gerado'" class="modal-footer">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @click="fecharModalLink">Fechar</button>
+                        <button type="button" class="btn btn-sm btn-outline-lua" @click="linkState = 'selecionando'">
+                            <i class="bi bi-plus me-1"></i>Gerar outro
                         </button>
                     </div>
                 </div>
@@ -601,6 +663,64 @@ async function salvarAgendamento() {
 }
 
 onMounted(() => loadMes());
+
+// ── Modal de link de agendamento ─────────────────────────────────────────────
+const modalLinkRef  = ref(null);
+const linkInputRef  = ref(null);
+let   bsModalLink   = null;
+
+const linkState     = ref('selecionando');  // 'selecionando' | 'gerado'
+const linkClienteId = ref('');
+const gerandoLink   = ref(false);
+const linkCopiado   = ref(false);
+const linkGerado    = ref({ url: '', expires_at: '' });
+
+async function abrirModalLink() {
+    linkState.value     = 'selecionando';
+    linkClienteId.value = '';
+    linkCopiado.value   = false;
+    await loadDadosModal();
+    nextTick(() => {
+        if (!bsModalLink) bsModalLink = new window.bootstrap.Modal(modalLinkRef.value);
+        bsModalLink.show();
+    });
+}
+
+function fecharModalLink() { bsModalLink?.hide(); }
+
+async function gerarLink() {
+    gerandoLink.value = true;
+    try {
+        const payload = linkClienteId.value ? { cliente_id: linkClienteId.value } : {};
+        const { data } = await axios.post('/banho-tosa/links', payload);
+        linkGerado.value  = data;
+        linkState.value   = 'gerado';
+        linkCopiado.value = false;
+    } catch (e) {
+        swalError(e.response?.data?.message || 'Erro ao gerar link.');
+    } finally {
+        gerandoLink.value = false;
+    }
+}
+
+async function copiarLink() {
+    try {
+        await navigator.clipboard.writeText(linkGerado.value.url);
+        linkCopiado.value = true;
+        setTimeout(() => { linkCopiado.value = false; }, 2000);
+    } catch {
+        linkInputRef.value?.select();
+        document.execCommand('copy');
+        linkCopiado.value = true;
+        setTimeout(() => { linkCopiado.value = false; }, 2000);
+    }
+}
+
+function fmtDatetime(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 </script>
 
 <style scoped>
@@ -673,4 +793,12 @@ onMounted(() => loadMes());
 [data-bs-theme="dark"] .pill--cancelado  { color: #ea868f; background: #dc354533; }
 [data-bs-theme="dark"] .pill--solicitado { color: #adb5bd; background: #6c757d33; }
 [data-bs-theme="dark"] .pill--faltou     { color: #adb5bd; background: #49505733; }
+.btn-outline-lua {
+    color: var(--color-lua, #6246ea);
+    border-color: var(--color-lua, #6246ea);
+}
+.btn-outline-lua:hover {
+    background: var(--color-lua, #6246ea);
+    color: #fff;
+}
 </style>

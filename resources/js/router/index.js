@@ -40,10 +40,18 @@ import BanhoTosaAgenda from '../pages/banho-tosa/Agenda.vue';
 import BanhoTosaServicosIndex from '../pages/banho-tosa/ServicosIndex.vue';
 import BanhoTosaServicosForm from '../pages/banho-tosa/ServicosForm.vue';
 import BanhoTosaCustosIndex from '../pages/banho-tosa/CustosIndex.vue';
+import AgendamentoPublico from '../pages/banho-tosa/AgendamentoPublico.vue';
 import PedidosCompraIndex from '../pages/pedidos-compra/Index.vue';
 import PedidosCompraForm from '../pages/pedidos-compra/Form.vue';
 
 const routes = [
+    // Rota pública — sem autenticação, sem layout
+    {
+        path: '/agendar/:token',
+        name: 'agendamento.publico',
+        component: AgendamentoPublico,
+        meta: { public: true },
+    },
     {
         path: '/',
         component: GuestLayout,
@@ -132,6 +140,9 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
     const auth = useAuthStore();
+
+    // Rotas públicas não precisam de autenticação
+    if (to.meta.public) return next();
 
     if (!auth.loaded) {
         await auth.fetchUser();

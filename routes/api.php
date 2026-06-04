@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\AgendamentoPublicoController;
 use App\Http\Controllers\Api\BancoController;
 use App\Http\Controllers\Api\AlertasMetricasController;
+use App\Http\Controllers\Api\LinkAgendamentoController;
 use App\Http\Controllers\Api\BanhoTosaAgendamentoController;
 use App\Http\Controllers\Api\BanhoTosaServicoController;
 use App\Http\Controllers\Api\BanhoTosaCustoController;
@@ -20,6 +22,13 @@ use App\Http\Controllers\Api\ProdutoController;
 use App\Http\Controllers\Api\UsuarioController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+// === Rotas públicas (sem autenticação) ===
+Route::prefix('publico')->middleware(['throttle:30,1'])->group(function () {
+    Route::get('agendar/{token}', [AgendamentoPublicoController::class, 'show']);
+    Route::get('agendar/{token}/slots', [AgendamentoPublicoController::class, 'slots']);
+    Route::post('agendar/{token}', [AgendamentoPublicoController::class, 'store']);
+});
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
@@ -80,6 +89,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('pagamentos-alertas', [PagamentoController::class, 'alertas']);
 
     // === Banho e Tosa (admin + atendente) ===
+    Route::post('banho-tosa/links', [LinkAgendamentoController::class, 'store']);
     Route::get('banho-tosa/agendamentos', [BanhoTosaAgendamentoController::class, 'index']);
     Route::post('banho-tosa/agendamentos', [BanhoTosaAgendamentoController::class, 'store']);
     Route::put('banho-tosa/agendamentos/{agendamento}', [BanhoTosaAgendamentoController::class, 'update']);

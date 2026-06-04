@@ -15,6 +15,8 @@ class CalendarioFuncionamento extends Model
         'loja_id',
         'dia_semana',
         'ativa',
+        'horario_abertura',
+        'horario_fechamento',
     ];
 
     protected $casts = [
