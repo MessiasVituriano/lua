@@ -148,6 +148,49 @@
                             <div class="geral-formula">Vendas − Saídas − Sangrias + Aportes</div>
                         </div>
                     </div>
+
+                    <!-- Breakdown por forma (mesmo padrão do Movimentações) -->
+                    <template v-if="dGeralSaldos">
+                        <div class="geral-section-label">Por forma de recebimento</div>
+                        <div class="geral-forma-grid">
+                            <!-- Caixa Dinheiro -->
+                            <div class="geral-forma-card" style="border-left-color: #059669">
+                                <div class="geral-forma-title"><i class="bi bi-cash-stack"></i> Caixa Dinheiro</div>
+                                <div class="geral-forma-value" :class="dGeralSaldos.caixa_dinheiro.saldo >= 0 ? 'positive' : 'negative'">
+                                    R$ {{ fmt(dGeralSaldos.caixa_dinheiro.saldo) }}
+                                </div>
+                                <div class="geral-forma-sub">
+                                    Entradas: R$ {{ fmt(dGeralSaldos.caixa_dinheiro.entradas) }} ·
+                                    Saídas: R$ {{ fmt(dGeralSaldos.caixa_dinheiro.saidas) }}
+                                </div>
+                            </div>
+                            <!-- PIX sem banco -->
+                            <div v-if="dGeralSaldos.formas?.pix" class="geral-forma-card" style="border-left-color: #d97706">
+                                <div class="geral-forma-title"><i class="bi bi-qr-code"></i> PIX (sem banco)</div>
+                                <div class="geral-forma-value" :class="dGeralSaldos.formas.pix.saldo >= 0 ? 'positive' : 'negative'">
+                                    R$ {{ fmt(dGeralSaldos.formas.pix.saldo) }}
+                                </div>
+                                <div class="geral-forma-sub">
+                                    Entradas: R$ {{ fmt(dGeralSaldos.formas.pix.entradas) }} ·
+                                    Saídas: R$ {{ fmt(dGeralSaldos.formas.pix.saidas) }}
+                                </div>
+                            </div>
+                            <!-- Cada banco -->
+                            <div v-for="b in dGeralSaldos.bancos" :key="b.id" class="geral-forma-card" style="border-left-color: #0284c7" :class="{ 'opacity-75': !b.ativo }">
+                                <div class="geral-forma-title">
+                                    <i class="bi bi-bank"></i> {{ b.nome }}
+                                    <span v-if="!b.ativo" class="geral-badge-inativo">inativo</span>
+                                </div>
+                                <div class="geral-forma-value" :class="b.saldo >= 0 ? 'positive' : 'negative'">
+                                    R$ {{ fmt(b.saldo) }}
+                                </div>
+                                <div class="geral-forma-sub">
+                                    Entradas: R$ {{ fmt(b.entradas) }} ·
+                                    Saídas: R$ {{ fmt(b.saidas) }}
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </template>
             </div>
 
@@ -515,13 +558,18 @@ const barChartReady = ref(false);
 const metaChartReady = ref(false);
 
 const dGeral = ref(null);
+const dGeralSaldos = ref(null);
 const loadingGeral = ref(true);
 
 async function loadGeral() {
     loadingGeral.value = true;
     try {
-        const { data } = await axios.get('/dashboard/geral');
-        dGeral.value = data;
+        const [{ data: g }, { data: s }] = await Promise.all([
+            axios.get('/dashboard/geral'),
+            axios.get('/movimentacoes-internas-saldos'),
+        ]);
+        dGeral.value = g;
+        dGeralSaldos.value = s;
     } catch {} finally { loadingGeral.value = false; }
 }
 
@@ -1650,5 +1698,60 @@ onMounted(() => {
     font-size: 0.7rem;
     color: var(--lua-text-muted);
     margin-top: 0.125rem;
+}
+
+/* Breakdown por forma */
+.geral-section-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--lua-text-muted);
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--lua-border);
+}
+.geral-forma-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+}
+.geral-forma-card {
+    background: var(--lua-surface-muted);
+    border: 1px solid var(--lua-border);
+    border-left-width: 3px;
+    border-radius: var(--lua-radius);
+    padding: 0.875rem 1rem;
+}
+.geral-forma-title {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--lua-text-soft);
+    margin-bottom: 0.35rem;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+.geral-forma-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.geral-forma-value.positive { color: var(--lua-primary); }
+.geral-forma-value.negative { color: #dc2626; }
+.geral-forma-sub {
+    font-size: 0.75rem;
+    color: var(--lua-text-muted);
+    margin-top: 0.3rem;
+}
+.geral-badge-inativo {
+    font-size: 0.65rem;
+    background: var(--lua-surface);
+    border: 1px solid var(--lua-border);
+    border-radius: 4px;
+    padding: 0 4px;
+    color: var(--lua-text-muted);
+    margin-left: 4px;
 }
 </style>
