@@ -104,6 +104,53 @@
                 </div>
             </div>
 
+            <!-- Fluxo de Caixa Geral (Acumulado) -->
+            <div class="card section-card geral-panel">
+                <div class="section-header">
+                    <div>
+                        <h3 class="section-title">Fluxo de Caixa Geral — Acumulado</h3>
+                        <p class="section-subtitle">
+                            Totais históricos sem filtro de período
+                            <template v-if="dGeral?.desde"> · desde {{ fmtDate(dGeral.desde) }}</template>
+                        </p>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" @click="loadGeral" :disabled="loadingGeral" title="Atualizar">
+                        <span v-if="loadingGeral" class="spinner-border spinner-border-sm"></span>
+                        <span v-else>↻</span>
+                    </button>
+                </div>
+
+                <div v-if="loadingGeral" class="loading-state py-3">
+                    <div class="spinner-border text-primary spinner-border-sm"></div>
+                </div>
+
+                <template v-else-if="dGeral">
+                    <div class="geral-grid">
+                        <div class="geral-card success">
+                            <div class="geral-label">Total Vendas (Entradas)</div>
+                            <div class="geral-value">R$ {{ fmt(dGeral.total_entradas) }}</div>
+                        </div>
+                        <div class="geral-card danger">
+                            <div class="geral-label">Total Saídas (Pagamentos)</div>
+                            <div class="geral-value">R$ {{ fmt(dGeral.total_saidas) }}</div>
+                        </div>
+                        <div class="geral-card warning">
+                            <div class="geral-label">Total Sangrias</div>
+                            <div class="geral-value">R$ {{ fmt(dGeral.total_sangrias) }}</div>
+                        </div>
+                        <div class="geral-card info">
+                            <div class="geral-label">Total Aportes</div>
+                            <div class="geral-value">R$ {{ fmt(dGeral.total_aportes) }}</div>
+                        </div>
+                        <div class="geral-card" :class="dGeral.saldo_geral >= 0 ? 'primary' : 'danger'">
+                            <div class="geral-label">Saldo Geral Acumulado</div>
+                            <div class="geral-value fw-bold">R$ {{ fmt(dGeral.saldo_geral) }}</div>
+                            <div class="geral-formula">Vendas − Saídas − Sangrias + Aportes</div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
             <!-- Metas (Resumo) -->
             <div v-if="isAdmin" class="card section-card meta-panel">
                 <div class="section-header">
@@ -466,6 +513,17 @@ const d = ref(null);
 const loading = ref(true);
 const barChartReady = ref(false);
 const metaChartReady = ref(false);
+
+const dGeral = ref(null);
+const loadingGeral = ref(true);
+
+async function loadGeral() {
+    loadingGeral.value = true;
+    try {
+        const { data } = await axios.get('/dashboard/geral');
+        dGeral.value = data;
+    } catch {} finally { loadingGeral.value = false; }
+}
 
 const savingMetas = ref(false);
 const savingCalendario = ref(false);
@@ -1226,7 +1284,10 @@ function varClassInv(atual, anterior) {
     return 'down';
 }
 
-onMounted(load);
+onMounted(() => {
+    load();
+    loadGeral();
+});
 </script>
 
 <style scoped>
@@ -1544,4 +1605,50 @@ onMounted(load);
 .row-total td { border-bottom: none; }
 .row-pending { background: var(--lua-warning-soft); color: var(--lua-warning); }
 .row-pending td { border-bottom: none; }
+
+/* Fluxo Geral Acumulado */
+.geral-panel { }
+.geral-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+@media (max-width: 1200px) { .geral-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 768px) { .geral-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .geral-grid { grid-template-columns: 1fr; } }
+
+.geral-card {
+    background: var(--lua-surface-muted);
+    border: 1px solid var(--lua-border);
+    border-radius: var(--lua-radius);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+.geral-card.success { border-left: 3px solid #059669; }
+.geral-card.danger  { border-left: 3px solid #dc2626; }
+.geral-card.warning { border-left: 3px solid #d97706; }
+.geral-card.info    { border-left: 3px solid #0284c7; }
+.geral-card.primary { border-left: 3px solid var(--lua-primary); }
+
+.geral-label {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--lua-text-muted);
+}
+.geral-value {
+    font-size: 1.125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--lua-text);
+}
+.geral-formula {
+    font-size: 0.7rem;
+    color: var(--lua-text-muted);
+    margin-top: 0.125rem;
+}
 </style>

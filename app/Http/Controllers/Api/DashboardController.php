@@ -286,4 +286,39 @@ class DashboardController extends Controller
             'vendas_por_hora' => $vendasPorHora,
         ]);
     }
+
+    public function geral(Request $request)
+    {
+        $lojaId = auth()->user()->loja_id;
+
+        $totalEntradas = (float) CaixaDiario::where('loja_id', $lojaId)
+            ->sum('total_entradas');
+
+        $totalSaidas = (float) Pagamento::where('loja_id', $lojaId)
+            ->whereIn('status', ['pago', 'parcial'])
+            ->sum('valor_pago');
+
+        $totalAportes = (float) MovimentacaoInterna::where('loja_id', $lojaId)
+            ->where('status', 'aprovada')
+            ->where('tipo', 'aporte')
+            ->sum('valor');
+
+        $totalSangrias = (float) MovimentacaoInterna::where('loja_id', $lojaId)
+            ->where('status', 'aprovada')
+            ->where('tipo', 'sangria')
+            ->sum('valor');
+
+        $saldoGeral = $totalEntradas - $totalSaidas + $totalAportes - $totalSangrias;
+
+        $desde = CaixaDiario::where('loja_id', $lojaId)->min('data');
+
+        return response()->json([
+            'total_entradas' => round($totalEntradas, 2),
+            'total_saidas'   => round($totalSaidas, 2),
+            'total_aportes'  => round($totalAportes, 2),
+            'total_sangrias' => round($totalSangrias, 2),
+            'saldo_geral'    => round($saldoGeral, 2),
+            'desde'          => $desde,
+        ]);
+    }
 }

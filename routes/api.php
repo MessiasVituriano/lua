@@ -92,6 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // === Acesso: somente admin ===
     Route::middleware('role:admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index']);
+        Route::get('/dashboard/geral', [DashboardController::class, 'geral']);
         Route::get('metas/anual', [MetaController::class, 'anual']);
         Route::get('metas', [MetaController::class, 'index']);
         Route::post('metas', [MetaController::class, 'store']);
