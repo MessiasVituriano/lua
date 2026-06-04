@@ -69,6 +69,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Movimentacoes Internas (CRUD para todos, aprovacao admin via middleware no controller)
     Route::get('movimentacoes-internas-saldos', [MovimentacaoInternaController::class, 'saldos']);
+    Route::get('dashboard/geral', [DashboardController::class, 'geral']);
     Route::get('movimentacoes-internas/pdf', [MovimentacaoInternaController::class, 'pdf']);
     Route::apiResource('movimentacoes-internas', MovimentacaoInternaController::class);
     Route::post('movimentacoes-internas/{movimentacoes_interna}/aprovar', [MovimentacaoInternaController::class, 'aprovar']);
@@ -92,7 +93,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // === Acesso: somente admin ===
     Route::middleware('role:admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index']);
-        Route::get('/dashboard/geral', [DashboardController::class, 'geral']);
         Route::get('metas/anual', [MetaController::class, 'anual']);
         Route::get('metas', [MetaController::class, 'index']);
         Route::post('metas', [MetaController::class, 'store']);
