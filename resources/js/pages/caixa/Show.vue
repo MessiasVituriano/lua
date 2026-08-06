@@ -154,6 +154,8 @@
                 <table class="table table-hover mb-0">
                     <thead>
                         <tr>
+                            <th>Hora</th>
+                            <th v-if="userIsAdmin">Vendedor</th>
                             <th>Forma</th>
                             <th>Banco</th>
                             <th>Valor</th>
@@ -163,6 +165,8 @@
                     </thead>
                     <tbody>
                         <tr v-for="e in caixa.entradas" :key="e.id">
+                            <td class="text-muted small">{{ fmtHora(e.created_at) }}</td>
+                            <td v-if="userIsAdmin">{{ e.user?.name || '-' }}</td>
                             <td>
                                 <span class="badge bg-secondary">{{ formas[e.forma_recebimento] }}</span>
                                 <div v-if="e.bandeira" class="small text-muted mt-1">
@@ -215,7 +219,7 @@
                             </td>
                         </tr>
                         <tr v-if="!caixa.entradas?.length">
-                            <td :colspan="caixa.status === 'aberto' && userIsAdmin ? 5 : 4" class="text-center text-muted py-4">
+                            <td :colspan="userIsAdmin ? (caixa.status === 'aberto' ? 7 : 6) : 5" class="text-center text-muted py-4">
                                 Nenhuma entrada registrada.
                             </td>
                         </tr>
@@ -272,7 +276,32 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Forma de Recebimento</label>
-                            <input type="text" class="form-control" :value="formas[editandoEntrada.forma_recebimento]" disabled>
+                            <select class="form-select" v-model="editForm.forma_recebimento" @change="onEditFormaChange">
+                                <option v-for="(label, key) in formas" :key="key" :value="key">{{ label }}</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Banco
+                                <span v-if="['pix','cartao_debito','cartao_credito'].includes(editForm.forma_recebimento)" class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" v-model="editForm.banco_id" :disabled="editForm.forma_recebimento === 'dinheiro'">
+                                <option :value="null">-</option>
+                                <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nome }}</option>
+                            </select>
+                        </div>
+                        <div v-if="editEhCartao" class="mb-3">
+                            <label class="form-label">Bandeira *</label>
+                            <select class="form-select" v-model="editForm.bandeira_id">
+                                <option :value="null">Selecione...</option>
+                                <option v-for="b in editBandeirasDisponiveis" :key="b.id" :value="b.id">{{ b.nome }}</option>
+                            </select>
+                        </div>
+                        <div v-if="editForm.forma_recebimento === 'cartao_credito'" class="mb-3">
+                            <label class="form-label">Parcelas *</label>
+                            <select class="form-select" v-model.number="editForm.parcelas">
+                                <option v-for="n in 12" :key="n" :value="n">{{ n }}x</option>
+                            </select>
                         </div>
                         <div v-if="editandoEntrada.valor_bruto && parseFloat(editandoEntrada.valor_bruto) !== parseFloat(editandoEntrada.valor)" class="mb-3">
                             <label class="form-label">Valor Bruto</label>
@@ -289,7 +318,6 @@
                                     min="0.01"
                                     class="form-control"
                                     v-model="editForm.valor"
-                                    required
                                     autofocus
                                 >
                             </div>
@@ -304,7 +332,7 @@
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-secondary" @click="editandoEntrada = null" :disabled="editLoading">Cancelar</button>
-                        <button class="btn btn-primary" @click="salvarEditarEntrada" :disabled="editLoading || !editForm.valor">
+                        <button class="btn btn-primary" @click="salvarEditarEntrada" :disabled="editLoading">
                             <span v-if="editLoading" class="spinner-border spinner-border-sm me-1"></span>
                             Salvar
                         </button>
@@ -387,13 +415,35 @@ const addPreviewCalc = computed(() => {
 // ── Edit modal ──
 const editandoEntrada = ref(null);
 const editLoading = ref(false);
-const editForm = ref({ valor: '', descricao: '' });
+const editForm = ref({ valor: '', descricao: '', forma_recebimento: 'dinheiro', banco_id: null, bandeira_id: null, parcelas: 1 });
 
 // ── Delete ──
 const deletandoId = ref(null);
 
 function fmt(v) { return Number(v || 0).toFixed(2).replace('.', ','); }
 function fmtPct(v) { return Number(v || 0).toFixed(2).replace('.', ',') + '%'; }
+function fmtHora(d) {
+    if (!d) return '';
+    return new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+const editEhCartao = computed(() => ['cartao_debito', 'cartao_credito'].includes(editForm.value.forma_recebimento));
+
+const editModalidadeAtual = computed(() => {
+    if (editForm.value.forma_recebimento === 'cartao_debito') return 'debito';
+    if (editForm.value.forma_recebimento !== 'cartao_credito' || !editForm.value.parcelas) return null;
+    if (editForm.value.parcelas === 1) return 'credito_avista';
+    if (editForm.value.parcelas >= 2 && editForm.value.parcelas <= 6) return 'credito_2_6';
+    if (editForm.value.parcelas >= 7 && editForm.value.parcelas <= 12) return 'credito_7_12';
+    return null;
+});
+
+const editBandeirasDisponiveis = computed(() => {
+    const origem = planoAtivo.value?.bandeiras?.length ? planoAtivo.value.bandeiras : bandeiras.value;
+    const mod = editModalidadeAtual.value;
+    if (!mod) return origem;
+    return origem.filter(b => b.taxas?.[mod] !== null && b.taxas?.[mod] !== undefined);
+});
 
 async function loadCaixa() {
     const { data } = await axios.get('/caixa/' + route.params.id);
@@ -479,16 +529,58 @@ function abrirEditarEntrada(entrada) {
     editForm.value = {
         valor: parseFloat(entrada.valor),
         descricao: entrada.descricao || '',
+        forma_recebimento: entrada.forma_recebimento || 'dinheiro',
+        banco_id: entrada.banco_id || null,
+        bandeira_id: entrada.bandeira_id || null,
+        parcelas: Number(entrada.parcelas || 1),
     };
 }
 
+function onEditFormaChange() {
+    if (editForm.value.forma_recebimento === 'dinheiro') {
+        editForm.value.banco_id = null;
+    }
+    if (!editEhCartao.value) {
+        editForm.value.bandeira_id = null;
+        editForm.value.parcelas = 1;
+    } else if (editForm.value.forma_recebimento === 'cartao_debito') {
+        editForm.value.parcelas = 1;
+    }
+}
+
 async function salvarEditarEntrada() {
-    if (!editForm.value.valor || parseFloat(editForm.value.valor) <= 0) return;
+    const forma = editForm.value.forma_recebimento;
+
+    if (['pix', 'cartao_debito', 'cartao_credito'].includes(forma) && !editForm.value.banco_id) {
+        swalError('Selecione o banco para este tipo de pagamento.');
+        return;
+    }
+    if (editEhCartao.value && !editForm.value.bandeira_id) {
+        swalError('Selecione a bandeira do cartao.');
+        return;
+    }
+    if (forma === 'cartao_credito' && !editForm.value.parcelas) {
+        swalError('Selecione a quantidade de parcelas.');
+        return;
+    }
+
     editLoading.value = true;
     try {
+        const payload = {
+            forma_recebimento: forma,
+            banco_id: editForm.value.banco_id || null,
+            bandeira_id: editEhCartao.value ? editForm.value.bandeira_id : null,
+            parcelas: forma === 'cartao_credito' ? Number(editForm.value.parcelas) : null,
+            descricao: editForm.value.descricao || null,
+        };
+
+        if (editForm.value.valor && parseFloat(editForm.value.valor) > 0) {
+            payload.valor = parseFloat(editForm.value.valor);
+        }
+
         await axios.put(
             '/caixa/' + caixa.value.id + '/entrada/' + editandoEntrada.value.id,
-            { valor: parseFloat(editForm.value.valor), descricao: editForm.value.descricao || null }
+            payload
         );
         swalSuccess('Entrada atualizada.');
         editandoEntrada.value = null;

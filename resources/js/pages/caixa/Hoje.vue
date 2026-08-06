@@ -387,16 +387,18 @@
                         <thead>
                             <tr>
                                 <th>Hora</th>
+                                <th v-if="userIsAdmin">Vendedor</th>
                                 <th>Forma</th>
                                 <th>Banco</th>
                                 <th>Valor</th>
                                 <th>Descricao</th>
-                                <th v-if="caixa.status === 'aberto'" width="60"></th>
+                                <th v-if="caixa.status === 'aberto'" width="100"></th>
                             </tr>
                         </thead>
                         <TransitionGroup tag="tbody" name="row">
                             <tr v-for="e in entradasOrdenadas" :key="e.id" :class="{ 'table-success': e._new }">
                                 <td class="text-muted small">{{ fmtHora(e.created_at) }}</td>
+                                <td v-if="userIsAdmin">{{ e.user?.name || '-' }}</td>
                                 <td>
                                     <span class="badge" :class="formaBadge(e.forma_recebimento)">{{ formas[e.forma_recebimento] }}</span>
                                     <div v-if="e.bandeira_id || e.bandeira" class="small text-muted mt-1">
@@ -428,20 +430,79 @@
                                     </div>
                                 </td>
                                 <td v-if="caixa.status === 'aberto'">
-                                    <button class="btn btn-sm btn-outline-danger" @click="removerEntrada(e)" :disabled="e._removing">
-                                        <i class="bi" :class="e._removing ? 'spinner-border spinner-border-sm' : 'bi-x'"></i>
-                                    </button>
+                                    <div class="d-flex gap-1">
+                                        <button class="btn btn-sm btn-outline-primary" @click="abrirEditarFormaEntrada(e)" title="Alterar forma de pagamento">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" @click="removerEntrada(e)" :disabled="e._removing">
+                                            <i class="bi" :class="e._removing ? 'spinner-border spinner-border-sm' : 'bi-x'"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </TransitionGroup>
                         <tbody v-if="!entradas.length">
                             <tr>
-                                <td :colspan="caixa.status === 'aberto' ? 6 : 5" class="text-center text-muted py-4">
+                                <td :colspan="caixa.status === 'aberto' ? (userIsAdmin ? 7 : 6) : (userIsAdmin ? 6 : 5)" class="text-center text-muted py-4">
                                     Nenhuma entrada registrada.
                                 </td>
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Modal: alterar somente forma de pagamento -->
+            <div v-if="editandoFormaEntrada" class="modal d-block" tabindex="-1" style="background:rgba(0,0,0,0.5)">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Alterar Forma de Pagamento</h5>
+                            <button type="button" class="btn-close" @click="fecharEditarFormaEntrada" :disabled="editandoFormaLoading"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Forma *</label>
+                                <select class="form-select" v-model="editandoFormaForm.forma_recebimento" @change="onEditFormaChange">
+                                    <option v-for="(label, key) in formas" :key="key" :value="key">{{ label }}</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Banco
+                                    <span v-if="['pix','cartao_debito','cartao_credito'].includes(editandoFormaForm.forma_recebimento)" class="text-danger">*</span>
+                                </label>
+                                <select
+                                    class="form-select"
+                                    v-model="editandoFormaForm.banco_id"
+                                    :disabled="editandoFormaForm.forma_recebimento === 'dinheiro'"
+                                >
+                                    <option :value="null">-</option>
+                                    <option v-for="b in bancos" :key="b.id" :value="b.id">{{ b.nome }}</option>
+                                </select>
+                            </div>
+                            <div v-if="editandoFormaEhCartao" class="mb-3">
+                                <label class="form-label">Bandeira *</label>
+                                <select class="form-select" v-model="editandoFormaForm.bandeira_id">
+                                    <option :value="null">Selecione...</option>
+                                    <option v-for="b in editandoFormaBandeirasDisponiveis" :key="b.id" :value="b.id">{{ b.nome }}</option>
+                                </select>
+                            </div>
+                            <div v-if="editandoFormaForm.forma_recebimento === 'cartao_credito'" class="mb-0">
+                                <label class="form-label">Parcelas *</label>
+                                <select class="form-select" v-model.number="editandoFormaForm.parcelas">
+                                    <option v-for="n in 12" :key="n" :value="n">{{ n }}x</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" @click="fecharEditarFormaEntrada" :disabled="editandoFormaLoading">Cancelar</button>
+                            <button class="btn btn-primary" @click="salvarEditarFormaEntrada" :disabled="editandoFormaLoading">
+                                <span v-if="editandoFormaLoading" class="spinner-border spinner-border-sm me-1"></span>
+                                Salvar forma
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -501,6 +562,14 @@ const bancos = ref([]);
 const bancosMap = ref({});
 const valorInput = ref(null);
 const lastSync = ref('');
+const editandoFormaEntrada = ref(null);
+const editandoFormaLoading = ref(false);
+const editandoFormaForm = reactive({
+    forma_recebimento: 'dinheiro',
+    banco_id: null,
+    bandeira_id: null,
+    parcelas: 1,
+});
 let pollTimer = null;
 
 const formas = { dinheiro: 'Dinheiro', pix: 'PIX', cartao_debito: 'Cartao Debito', cartao_credito: 'Cartao Credito' };
@@ -565,6 +634,23 @@ const modalidadeAtual = computed(() => {
     if (form.parcelas >= 2 && form.parcelas <= 6) return 'credito_2_6';
     if (form.parcelas >= 7 && form.parcelas <= 12) return 'credito_7_12';
     return null;
+});
+
+const editandoFormaEhCartao = computed(() => ['cartao_debito', 'cartao_credito'].includes(editandoFormaForm.forma_recebimento));
+
+const editandoFormaModalidadeAtual = computed(() => {
+    if (editandoFormaForm.forma_recebimento === 'cartao_debito') return 'debito';
+    if (editandoFormaForm.forma_recebimento !== 'cartao_credito' || !editandoFormaForm.parcelas) return null;
+    if (editandoFormaForm.parcelas === 1) return 'credito_avista';
+    if (editandoFormaForm.parcelas >= 2 && editandoFormaForm.parcelas <= 6) return 'credito_2_6';
+    if (editandoFormaForm.parcelas >= 7 && editandoFormaForm.parcelas <= 12) return 'credito_7_12';
+    return null;
+});
+
+const editandoFormaBandeirasDisponiveis = computed(() => {
+    if (!planoAtivo.value) return [];
+    const mod = editandoFormaModalidadeAtual.value;
+    return planoAtivo.value.bandeiras.filter(b => !mod || b.taxas?.[mod] !== null && b.taxas?.[mod] !== undefined);
 });
 
 const previewCalc = computed(() => {
@@ -1053,6 +1139,76 @@ function onFormaChange() {
     }
 }
 
+function abrirEditarFormaEntrada(entrada) {
+    editandoFormaEntrada.value = entrada;
+    editandoFormaForm.forma_recebimento = entrada.forma_recebimento || 'dinheiro';
+    editandoFormaForm.banco_id = entrada.banco_id || null;
+    editandoFormaForm.bandeira_id = entrada.bandeira_id || null;
+    editandoFormaForm.parcelas = Number(entrada.parcelas || 1);
+}
+
+function fecharEditarFormaEntrada() {
+    if (editandoFormaLoading.value) return;
+    editandoFormaEntrada.value = null;
+}
+
+function onEditFormaChange() {
+    if (editandoFormaForm.forma_recebimento === 'dinheiro') {
+        editandoFormaForm.banco_id = null;
+    }
+    if (!editandoFormaEhCartao.value) {
+        editandoFormaForm.bandeira_id = null;
+        editandoFormaForm.parcelas = 1;
+    } else if (editandoFormaForm.forma_recebimento === 'cartao_debito') {
+        editandoFormaForm.parcelas = 1;
+    }
+}
+
+async function salvarEditarFormaEntrada() {
+    if (!editandoFormaEntrada.value || !caixa.value) return;
+
+    const forma = editandoFormaForm.forma_recebimento;
+    if (['pix', 'cartao_debito', 'cartao_credito'].includes(forma) && !editandoFormaForm.banco_id) {
+        swalWarning('Selecione o banco para este tipo de pagamento.');
+        return;
+    }
+    if (editandoFormaEhCartao.value && !editandoFormaForm.bandeira_id) {
+        swalWarning('Selecione a bandeira do cartao.');
+        return;
+    }
+    if (forma === 'cartao_credito' && !editandoFormaForm.parcelas) {
+        swalWarning('Selecione a quantidade de parcelas.');
+        return;
+    }
+
+    editandoFormaLoading.value = true;
+    try {
+        const payload = {
+            forma_recebimento: forma,
+            banco_id: editandoFormaForm.banco_id || null,
+            bandeira_id: editandoFormaEhCartao.value ? editandoFormaForm.bandeira_id : null,
+            parcelas: forma === 'cartao_credito' ? Number(editandoFormaForm.parcelas) : null,
+        };
+        const { data } = await axios.put('/caixa/' + caixa.value.id + '/entrada/' + editandoFormaEntrada.value.id, payload);
+
+        const entradaAtualizada = data?.entrada || data;
+        const idx = entradas.value.findIndex(e => e.id === entradaAtualizada.id);
+        if (idx !== -1) {
+            entradas.value.splice(idx, 1, entradaAtualizada);
+        }
+
+        swalSuccess('Forma de pagamento atualizada com sucesso.');
+        editandoFormaEntrada.value = null;
+    } catch (e) {
+        const msg = e.response?.data?.errors
+            ? Object.values(e.response.data.errors).flat().join('. ')
+            : (e.response?.data?.message || 'Erro ao atualizar forma de pagamento.');
+        swalError(msg);
+    } finally {
+        editandoFormaLoading.value = false;
+    }
+}
+
 function formaBadge(forma) {
     return {
         dinheiro: 'bg-success', pix: 'bg-primary',
@@ -1190,6 +1346,7 @@ async function adicionarEntrada() {
     const tempId = 'temp_' + Date.now();
     const entradaLocal = {
         id: tempId,
+        user: auth.user ? { id: auth.user.id, name: auth.user.name } : null,
         forma_recebimento: form.forma_recebimento,
         banco_id: form.banco_id,
         bandeira_id: form.bandeira_id,

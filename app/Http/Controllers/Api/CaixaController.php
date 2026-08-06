@@ -23,7 +23,7 @@ class CaixaController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('role:admin')->only(['historico', 'historicoPdf', 'autorizar', 'reabrir', 'atualizarEntrada']);
+        $this->middleware('role:admin')->only(['historico', 'historicoPdf', 'autorizar', 'reabrir']);
     }
 
     public function hoje()
@@ -31,7 +31,7 @@ class CaixaController extends Controller
         $lojaId = auth()->user()->loja_id;
         $hoje = Carbon::today();
 
-        $caixa = CaixaDiario::with(['entradas.banco', 'entradas.bandeira', 'entradas.itens.produto', 'entradas.itens.pet.cliente', 'entradas.itens.cliente', 'fechadoPor'])
+        $caixa = CaixaDiario::with(['entradas.user', 'entradas.banco', 'entradas.bandeira', 'entradas.itens.produto', 'entradas.itens.pet.cliente', 'entradas.itens.cliente', 'fechadoPor'])
             ->where('loja_id', $lojaId)
             ->where('data', $hoje)
             ->first();
@@ -188,7 +188,7 @@ class CaixaController extends Controller
         });
 
         $response = [
-            'entrada' => $entrada->load(['banco', 'bandeira', 'planoMaquininha', 'itens.produto', 'itens.pet.cliente', 'itens.cliente']),
+            'entrada' => $entrada->load(['user', 'banco', 'bandeira', 'planoMaquininha', 'itens.produto', 'itens.pet.cliente', 'itens.cliente']),
         ];
         
         if (!empty($alertas)) {
@@ -316,7 +316,7 @@ class CaixaController extends Controller
             'autorizado_em' => null,
         ]);
 
-        return response()->json($caixa->fresh()->load(['entradas.banco', 'fechadoPor']));
+        return response()->json($caixa->fresh()->load(['entradas.user', 'entradas.banco', 'fechadoPor']));
     }
 
     public function pendentes()
@@ -408,7 +408,7 @@ class CaixaController extends Controller
 
     public function show(CaixaDiario $caixa)
     {
-        $caixa->load(['entradas.banco', 'entradas.bandeira', 'entradas.itens.produto', 'entradas.itens.pet.cliente', 'entradas.itens.cliente', 'fechadoPor']);
+        $caixa->load(['entradas.user', 'entradas.banco', 'entradas.bandeira', 'entradas.itens.produto', 'entradas.itens.pet.cliente', 'entradas.itens.cliente', 'fechadoPor']);
 
         $totaisPorForma = $caixa->entradas()
             ->selectRaw('forma_recebimento, SUM(valor) as total')
@@ -507,21 +507,134 @@ class CaixaController extends Controller
             return response()->json(['message' => 'Entrada nao pertence a este caixa.'], 422);
         }
 
+        if (!auth()->user()->isAdmin() && (int) $entrada->user_id !== (int) auth()->id()) {
+            return response()->json(['message' => 'Voce nao pode editar esta entrada.'], 403);
+        }
+
         $dados = $request->validate([
-            'valor'     => ['required', 'numeric', 'min:0.01'],
+            'valor'     => ['nullable', 'numeric', 'min:0.01'],
             'descricao' => ['nullable', 'string', 'max:255'],
+            'forma_recebimento' => ['nullable', 'in:dinheiro,pix,cartao_debito,cartao_credito'],
+            'banco_id' => ['nullable', 'integer', 'exists:bancos,id'],
+            'bandeira_id' => ['nullable', 'integer', 'exists:bandeiras,id'],
+            'parcelas' => ['nullable', 'integer', 'min:1', 'max:12'],
         ]);
 
+        if (!array_key_exists('valor', $dados) && !array_key_exists('descricao', $dados) && !array_key_exists('forma_recebimento', $dados)) {
+            return response()->json(['message' => 'Informe ao menos um campo para atualizar.'], 422);
+        }
+
         DB::transaction(function () use ($entrada, $dados, $caixa) {
-            $entrada->update([
-                'valor'     => round((float) $dados['valor'], 2),
-                'descricao' => array_key_exists('descricao', $dados) ? $dados['descricao'] : $entrada->descricao,
-            ]);
+            $updates = [];
+
+            if (array_key_exists('descricao', $dados)) {
+                $updates['descricao'] = $dados['descricao'];
+            }
+
+            $novaForma = $dados['forma_recebimento'] ?? $entrada->forma_recebimento;
+            $formaFoiAlterada = array_key_exists('forma_recebimento', $dados) && $novaForma !== $entrada->forma_recebimento;
+
+            if (array_key_exists('valor', $dados)) {
+                $updates['valor'] = round((float) $dados['valor'], 2);
+            }
+
+            if ($formaFoiAlterada) {
+                $valorBase = array_key_exists('valor', $dados)
+                    ? round((float) $dados['valor'], 2)
+                    : (float) ($entrada->valor_bruto ?? $entrada->valor);
+
+                if ($valorBase <= 0) {
+                    throw new HttpResponseException(response()->json(['message' => 'Valor invalido para alterar forma de pagamento.'], 422));
+                }
+
+                if (in_array($novaForma, ['pix', 'cartao_debito', 'cartao_credito'])) {
+                    $bancoId = array_key_exists('banco_id', $dados)
+                        ? $dados['banco_id']
+                        : $entrada->banco_id;
+
+                    if (!$bancoId) {
+                        throw new HttpResponseException(response()->json(['message' => 'Informe o banco para este tipo de pagamento.'], 422));
+                    }
+
+                    $updates['banco_id'] = $bancoId;
+                } elseif (array_key_exists('banco_id', $dados)) {
+                    $updates['banco_id'] = $dados['banco_id'];
+                }
+
+                if (in_array($novaForma, ['cartao_debito', 'cartao_credito'])) {
+                    $lojaId = $caixa->loja_id;
+                    $parcelas = $novaForma === 'cartao_credito'
+                        ? (int) ($dados['parcelas'] ?? $entrada->parcelas ?? 1)
+                        : 1;
+
+                    if ($novaForma === 'cartao_credito' && $parcelas < 1) {
+                        throw new HttpResponseException(response()->json(['message' => 'Informe a quantidade de parcelas.'], 422));
+                    }
+
+                    $bandeiraId = $dados['bandeira_id'] ?? $entrada->bandeira_id;
+                    if (!$bandeiraId) {
+                        throw new HttpResponseException(response()->json(['message' => 'Informe a bandeira do cartao.'], 422));
+                    }
+
+                    $bandeira = Bandeira::where('id', $bandeiraId)
+                        ->where('loja_id', $lojaId)
+                        ->where('ativo', true)
+                        ->first();
+
+                    if (!$bandeira) {
+                        throw new HttpResponseException(response()->json(['message' => 'Bandeira invalida para esta loja.'], 422));
+                    }
+
+                    $plano = PlanoMaquininha::where('loja_id', $lojaId)
+                        ->where('ativo', true)
+                        ->first();
+
+                    if (!$plano) {
+                        throw new HttpResponseException(response()->json(['message' => 'Nenhum plano de maquininha ativo.'], 422));
+                    }
+
+                    $modalidade = PlanoMaquininha::modalidadePara($novaForma, $parcelas);
+                    if (!$modalidade) {
+                        throw new HttpResponseException(response()->json(['message' => 'Modalidade invalida.'], 422));
+                    }
+
+                    $calc = $plano->calcularLiquido($valorBase, $bandeira->id, $modalidade, $novaForma === 'cartao_credito');
+                    if (!$calc['ok']) {
+                        throw new HttpResponseException(response()->json(['message' => $calc['erro']], 422));
+                    }
+
+                    $updates['plano_maquininha_id'] = $plano->id;
+                    $updates['bandeira_id'] = $bandeira->id;
+                    $updates['parcelas'] = $parcelas;
+                    $updates['taxa_aplicada'] = $calc['taxa_total'];
+                    $updates['valor_bruto'] = $valorBase;
+                    $updates['com_antecipacao'] = $calc['com_antecipacao'];
+                    $updates['valor'] = $calc['valor_liquido'];
+                } else {
+                    $updates['plano_maquininha_id'] = null;
+                    $updates['bandeira_id'] = null;
+                    $updates['parcelas'] = null;
+                    $updates['taxa_aplicada'] = null;
+                    $updates['com_antecipacao'] = null;
+                    $updates['valor_bruto'] = null;
+
+                    if (!array_key_exists('valor', $dados) && $entrada->valor_bruto !== null) {
+                        $updates['valor'] = round((float) $entrada->valor_bruto, 2);
+                    }
+                }
+
+                $updates['forma_recebimento'] = $novaForma;
+            }
+
+            if (!empty($updates)) {
+                $entrada->update($updates);
+            }
+
             $caixa->recalcular();
         });
 
         return response()->json(
-            $entrada->fresh()->load(['banco', 'bandeira', 'itens.produto', 'itens.pet.cliente', 'itens.cliente'])
+            $entrada->fresh()->load(['user', 'banco', 'bandeira', 'itens.produto', 'itens.pet.cliente', 'itens.cliente'])
         );
     }
 
