@@ -31,4 +31,9 @@ class Fornecedor extends Model
         'petisco' => 'Petisco',
         'outros' => 'Outros',
     ];
+
+    public function produtos()
+    {
+        return $this->hasMany(Produto::class);
+    }
 }

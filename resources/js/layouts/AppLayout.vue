@@ -102,7 +102,7 @@
             </template>
 
             <div class="nav-section">Estoque</div>
-            <router-link class="nav-item" active-class="active" :to="{ name: 'produtos.index' }" @click="closeMobile">
+            <router-link class="nav-item" active-class="active" :to="{ name: 'estoque.index' }" @click="closeMobile">
                 <Package :size="16" class="nav-icon" />
                 <span>Produtos</span>
             </router-link>
@@ -246,6 +246,7 @@ const titles = {
     'alertas-metricas.index': 'Alertas e Métricas',
     'movimentacoes.index': 'Movimentações Internas', 'movimentacoes.create': 'Nova Movimentação', 'movimentacoes.edit': 'Editar Movimentação',
     'pagamentos.index': 'Pagamentos', 'pagamentos.calendario': 'Calendário de Pagamentos', 'pagamentos.create': 'Novo Pagamento', 'pagamentos.edit': 'Editar Pagamento',
+    'estoque.index': 'Estoque',
     'produtos.index': 'Produtos', 'produtos.create': 'Novo Produto', 'produtos.edit': 'Editar Produto', 'produtos.show': 'Detalhes do Produto',
 };
 

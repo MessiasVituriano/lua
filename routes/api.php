@@ -63,10 +63,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('produtos', ProdutoController::class);
     Route::get('produtos/{produto}/movimentacoes', [ProdutoController::class, 'movimentacoes']);
     Route::post('produtos/{produto}/movimentacao', [ProdutoController::class, 'registrarMovimentacao']);
+    Route::post('produtos-movimentacoes-lote', [ProdutoController::class, 'registrarMovimentacaoLote']);
 
     // Fornecedores (leitura para todos)
     Route::get('fornecedores', [FornecedorController::class, 'index']);
+    Route::get('fornecedores-sem-vinculo/produtos', [FornecedorController::class, 'produtosSemFornecedor']);
     Route::get('fornecedores/{fornecedor}', [FornecedorController::class, 'show']);
+    Route::get('fornecedores/{fornecedor}/produtos', [FornecedorController::class, 'produtos']);
 
     // Bancos (leitura para todos)
     Route::get('bancos', [BancoController::class, 'index']);

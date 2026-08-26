@@ -29,6 +29,7 @@ import PagamentosForm from '../pages/pagamentos/Form.vue';
 import PagamentosCalendario from '../pages/pagamentos/Calendario.vue';
 import MovimentacoesIndex from '../pages/movimentacoes/Index.vue';
 import MovimentacoesForm from '../pages/movimentacoes/Form.vue';
+import EstoqueIndex from '../pages/estoque/Index.vue';
 import ProdutosIndex from '../pages/produtos/Index.vue';
 import ProdutosForm from '../pages/produtos/Form.vue';
 import ProdutosShow from '../pages/produtos/Show.vue';
@@ -124,7 +125,9 @@ const routes = [
             { path: 'pedidos-compra/criar', name: 'pedidos-compra.create', component: PedidosCompraForm },
             { path: 'pedidos-compra/:id', name: 'pedidos-compra.show', component: PedidosCompraForm },
             { path: 'pedidos-compra/:id/editar', name: 'pedidos-compra.edit', component: PedidosCompraForm },
-            // Produtos
+            // Estoque (tela unificada: abas Produtos + Fornecedores)
+            { path: 'estoque', name: 'estoque.index', component: EstoqueIndex },
+            // Produtos (telas antigas, mantidas para acesso direto por URL)
             { path: 'produtos', name: 'produtos.index', component: ProdutosIndex },
             { path: 'produtos/criar', name: 'produtos.create', component: ProdutosForm },
             { path: 'produtos/:id', name: 'produtos.show', component: ProdutosShow },
