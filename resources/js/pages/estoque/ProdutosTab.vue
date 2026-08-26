@@ -93,7 +93,7 @@
                                         min="0"
                                         v-model="recebido[p.id]"
                                         :placeholder="isRacao(p) ? '0,000' : '0'"
-                                        @keyup.enter="registrar">
+                                        @keyup.enter="pedirConfirmacao">
                                     <span class="input-group-text">{{ isRacao(p) ? 'kg' : 'un' }}</span>
                                 </div>
                             </td>
@@ -120,7 +120,7 @@
                     v-model:motivo="motivo"
                     :total="itens.length"
                     :salvando="salvando"
-                    @registrar="registrar"
+                    @registrar="pedirConfirmacao"
                     @limpar="limpar" />
             </div>
 
@@ -136,6 +136,14 @@
                 </div>
             </div>
         </div>
+
+        <ConfirmarRecebimentoModal
+            v-model="confirmando"
+            v-model:motivo="motivo"
+            :itens="itens"
+            :salvando="salvando"
+            @confirmar="confirmar"
+            @remover="remover" />
     </div>
 </template>
 
@@ -145,6 +153,7 @@ import axios from 'axios';
 import { swalSuccess, swalError, swalConfirmDanger } from '../../utils/swal';
 import { useAuthStore } from '../../stores/auth';
 import BarraRecebimento from './BarraRecebimento.vue';
+import ConfirmarRecebimentoModal from './ConfirmarRecebimentoModal.vue';
 import { useRecebimento } from '../../composables/useRecebimento';
 import { CATEGORIAS_PRODUTO, fmtMoeda, fmtQtd, estoqueBaixo, isRacao, debounce } from '../../utils/estoque';
 
@@ -164,7 +173,7 @@ const meta = reactive({ current_page: 1, last_page: 1, total: 0 });
 // Filtros vivem aqui e sobrevivem enquanto a tela estiver aberta — nada de recarregar.
 const filters = reactive({ busca: '', categoria: '', fornecedor_id: '', ativo: '', estoque_baixo: false });
 
-const { recebido, motivo, salvando, itens, limpar, registrar } = useRecebimento(
+const { recebido, motivo, salvando, confirmando, itens, limpar, remover, pedirConfirmacao, confirmar } = useRecebimento(
     () => produtos.value,
     () => emit('changed')
 );

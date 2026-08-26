@@ -4,8 +4,8 @@ import { swalSuccess, swalError } from '../utils/swal';
 import { isRacao } from '../utils/estoque';
 
 /**
- * Recebimento de mercadoria: acumula as quantidades digitadas linha a linha e
- * lanca todas em uma unica requisicao transacional.
+ * Recebimento de mercadoria: acumula as quantidades digitadas linha a linha,
+ * pede confirmacao e lanca todas em uma unica requisicao transacional.
  *
  * @param {() => Array} getProdutos  produtos atualmente visiveis na lista
  * @param {() => void}  onSalvo      chamado apos gravar com sucesso
@@ -14,6 +14,7 @@ export function useRecebimento(getProdutos, onSalvo) {
     const recebido = reactive({});
     const motivo = ref('');
     const salvando = ref(false);
+    const confirmando = ref(false);
 
     // Guarda todo produto que ja passou pela tela: trocar de pagina, refiltrar ou
     // recolher um fornecedor nao pode descartar uma quantidade ja digitada.
@@ -30,7 +31,7 @@ export function useRecebimento(getProdutos, onSalvo) {
                 const bruto = parseFloat(valor);
                 if (!produto || !bruto || bruto <= 0) return null;
                 const quantidade = isRacao(produto) ? Math.round(bruto * 1000) : Math.round(bruto);
-                return quantidade >= 1 ? { produto_id: produto.id, quantidade } : null;
+                return quantidade >= 1 ? { produto, quantidade } : null;
             })
             .filter(Boolean)
     );
@@ -40,15 +41,30 @@ export function useRecebimento(getProdutos, onSalvo) {
         motivo.value = '';
     }
 
-    async function registrar() {
+    /** Tira uma linha do lote direto da tela de confirmacao. */
+    function remover(produtoId) {
+        delete recebido[produtoId];
+        if (itens.value.length === 0) confirmando.value = false;
+    }
+
+    function pedirConfirmacao() {
+        if (itens.value.length === 0 || salvando.value) return;
+        confirmando.value = true;
+    }
+
+    async function confirmar() {
         if (itens.value.length === 0 || salvando.value) return;
         salvando.value = true;
         try {
             const { data } = await axios.post('/produtos-movimentacoes-lote', {
                 tipo: 'entrada',
                 motivo: motivo.value || null,
-                itens: itens.value,
+                itens: itens.value.map(({ produto, quantidade }) => ({
+                    produto_id: produto.id,
+                    quantidade,
+                })),
             });
+            confirmando.value = false;
             limpar();
             swalSuccess(`${data.total} ${data.total === 1 ? 'entrada registrada' : 'entradas registradas'}.`);
             onSalvo?.();
@@ -59,5 +75,5 @@ export function useRecebimento(getProdutos, onSalvo) {
         }
     }
 
-    return { recebido, motivo, salvando, itens, limpar, registrar };
+    return { recebido, motivo, salvando, confirmando, itens, limpar, remover, pedirConfirmacao, confirmar };
 }

@@ -102,7 +102,7 @@
                                     @detalhe="id => emit('detalhe', id)"
                                     @editar="id => emit('editar', id)"
                                     @remover="removerProduto"
-                                    @registrar="registrar" />
+                                    @registrar="pedirConfirmacao" />
                             </td>
                         </tr>
                     </tbody>
@@ -125,7 +125,7 @@
                                     @detalhe="id => emit('detalhe', id)"
                                     @editar="id => emit('editar', id)"
                                     @remover="removerProduto"
-                                    @registrar="registrar" />
+                                    @registrar="pedirConfirmacao" />
                             </td>
                         </tr>
                     </tbody>
@@ -148,7 +148,7 @@
                     v-model:motivo="motivo"
                     :total="itens.length"
                     :salvando="salvando"
-                    @registrar="registrar"
+                    @registrar="pedirConfirmacao"
                     @limpar="limpar" />
             </div>
 
@@ -164,6 +164,14 @@
                 </div>
             </div>
         </div>
+
+        <ConfirmarRecebimentoModal
+            v-model="confirmando"
+            v-model:motivo="motivo"
+            :itens="itens"
+            :salvando="salvando"
+            @confirmar="confirmar"
+            @remover="remover" />
     </div>
 </template>
 
@@ -172,6 +180,7 @@ import { ref, reactive, computed, watch, onMounted } from 'vue';
 import axios from 'axios';
 import ProdutosDoFornecedor from './ProdutosDoFornecedor.vue';
 import BarraRecebimento from './BarraRecebimento.vue';
+import ConfirmarRecebimentoModal from './ConfirmarRecebimentoModal.vue';
 import { useRecebimento } from '../../composables/useRecebimento';
 import { swalSuccess, swalError, swalConfirmDanger } from '../../utils/swal';
 import { useAuthStore } from '../../stores/auth';
@@ -195,7 +204,7 @@ const filters = reactive({ busca: '', busca_produto: '', categoria: '', ativo: '
 const produtosExpandidos = computed(() =>
     Object.values(expandidos).flatMap(e => e.produtos)
 );
-const { recebido, motivo, salvando, itens, limpar, registrar } = useRecebimento(
+const { recebido, motivo, salvando, confirmando, itens, limpar, remover, pedirConfirmacao, confirmar } = useRecebimento(
     () => produtosExpandidos.value,
     () => emit('changed')
 );
