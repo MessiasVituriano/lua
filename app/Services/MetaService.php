@@ -7,6 +7,7 @@ use App\Models\CaixaDiario;
 use App\Models\ExcecaoFuncionamento;
 use App\Models\MetaDiaria;
 use App\Models\MetaMensal;
+use App\Models\Pagamento;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\DB;
@@ -306,6 +307,17 @@ class MetaService
 
         $qtdDiasFuncionamento = count($diasFuncionamento);
 
+        // Pro-labore nao desconta da meta por saldo: a meta mede o resultado
+        // que a loja gera, antes da retirada do dono. Continua sendo despesa
+        // em todo o resto do sistema (KPI Saldo, saidas por categoria, DRE).
+        $proLaborePorDia = Pagamento::where('loja_id', $lojaId)
+            ->where('categoria', 'pro_labore')
+            ->whereIn('status', ['pago', 'parcial'])
+            ->whereBetween('data_pagamento', [$inicio->toDateString(), $fim->toDateString()])
+            ->selectRaw('data_pagamento::text as dia, SUM(valor_pago) as total')
+            ->groupBy('dia')
+            ->pluck('total', 'dia');
+
         foreach (['venda', 'saldo'] as $tipo) {
             $metaMensal = MetaMensal::firstOrCreate(
                 [
@@ -357,10 +369,16 @@ class MetaService
 
                 if ($caixa) {
                     $caixa->loadMissing('entradas');
+
+                    // Devolve o pro-labore do dia ao saldo antes de comparar
+                    // com a meta.
+                    $saldoOperacional = (float) $caixa->saldo
+                        + (float) ($proLaborePorDia[$chave] ?? 0);
+
                     $valorRealizado = $tipo === 'venda'
                         ? (float) $caixa->total_entradas
-                        : (float) $caixa->saldo;
-                    $saldoDiario = (float) $caixa->saldo;
+                        : $saldoOperacional;
+                    $saldoDiario = $saldoOperacional;
                     $travada = $caixa->status === 'fechado';
                 }
 
@@ -557,7 +575,12 @@ class MetaService
                 ->sum('total_entradas')
             : (float) CaixaDiario::where('loja_id', $lojaId)
                 ->whereBetween('data', [$inicio->toDateString(), $fim->toDateString()])
-                ->sum('saldo');
+                ->sum('saldo')
+              + (float) Pagamento::where('loja_id', $lojaId)
+                ->where('categoria', 'pro_labore')
+                ->whereIn('status', ['pago', 'parcial'])
+                ->whereBetween('data_pagamento', [$inicio->toDateString(), $fim->toDateString()])
+                ->sum('valor_pago');
 
         if ($realizado > 0) {
             return round($realizado, 2);

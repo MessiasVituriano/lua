@@ -89,6 +89,7 @@
                             </h4>
                             <span class="badge" :class="metaBadgeClass(metaSaldo?.percentual_atingido)">{{ metaSaldo?.percentual_atingido || 0 }}%</span>
                         </div>
+                        <p class="section-subtitle mb-2">Resultado da loja, antes da retirada de pró-labore</p>
                         <div class="meta-stats">
                             <div><span>Realizado</span><strong>R$ {{ fmt(metaSaldo?.valor_realizado) }}</strong></div>
                             <div><span>Meta</span><strong>R$ {{ fmt(metaSaldo?.valor_meta) }}</strong></div>
@@ -143,7 +144,7 @@
                     <div class="kpi-value num-tabular" :class="d.saldo >= 0 ? 'text-primary' : 'text-danger'">
                         R$ {{ fmt(d.saldo) }}
                     </div>
-                    <div class="kpi-delta-label">Receitas menos despesas</div>
+                    <div class="kpi-delta-label">Receitas menos despesas, pró-labore incluído</div>
                 </div>
 
                 <div class="kpi">
