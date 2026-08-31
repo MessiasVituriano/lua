@@ -132,14 +132,36 @@ class ConverterSangriaEmProLabore extends Command
         return $sangria->banco_origem_id ? 'transferencia' : 'dinheiro';
     }
 
+    /**
+     * Descricoes como "pro labore", "Pró-labore" ou "pró labore + Lucro" ja se
+     * identificam sozinhas; prefixar viraria "Pró-labore - pro labore".
+     */
     private function descricao(MovimentacaoInterna $sangria): string
     {
         $original = trim((string) $sangria->descricao);
 
-        if ($original === '' || mb_stripos($original, 'pró-labore') !== false) {
+        if ($original === '') {
             return 'Pró-labore';
         }
 
+        $normalizada = preg_replace('/[^a-z]/', '', $this->semAcento(mb_strtolower($original)));
+
+        if (str_contains((string) $normalizada, 'prolabore')) {
+            return mb_substr($original, 0, 255);
+        }
+
         return mb_substr('Pró-labore - '.$original, 0, 255);
+    }
+
+    private function semAcento(string $texto): string
+    {
+        return strtr($texto, [
+            'á' => 'a', 'à' => 'a', 'ã' => 'a', 'â' => 'a',
+            'é' => 'e', 'ê' => 'e',
+            'í' => 'i',
+            'ó' => 'o', 'ô' => 'o', 'õ' => 'o',
+            'ú' => 'u',
+            'ç' => 'c',
+        ]);
     }
 }
