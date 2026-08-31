@@ -51,29 +51,47 @@ class CaixaDiario extends Model
         return $this->belongsTo(User::class, 'autorizado_por');
     }
 
-    public function recalcular()
+    /**
+     * Calcula os totais do dia a partir dos lancamentos, sem gravar nada.
+     * Fonte unica da formula: recalcular() grava o resultado e o comando
+     * caixa:recalcular usa em modo --dry-run para comparar sem alterar.
+     */
+    public function calcularTotais(): array
     {
-        $this->total_entradas = $this->entradas()->sum('valor');
+        $entradas = (float) $this->entradas()->sum('valor');
 
-        $this->total_saidas = Pagamento::where('loja_id', $this->loja_id)
+        $saidas = (float) Pagamento::where('loja_id', $this->loja_id)
             ->where('data_pagamento', $this->data)
             ->whereIn('status', ['pago', 'parcial'])
             ->sum('valor_pago');
 
         // Movimentacoes internas aprovadas do dia: sangrias subtraem, aportes somam
-        $aportes = MovimentacaoInterna::where('loja_id', $this->loja_id)
+        $aportes = (float) MovimentacaoInterna::where('loja_id', $this->loja_id)
             ->where('data_movimentacao', $this->data)
             ->where('status', 'aprovada')
             ->where('tipo', 'aporte')
             ->sum('valor');
 
-        $sangrias = MovimentacaoInterna::where('loja_id', $this->loja_id)
+        $sangrias = (float) MovimentacaoInterna::where('loja_id', $this->loja_id)
             ->where('data_movimentacao', $this->data)
             ->where('status', 'aprovada')
             ->where('tipo', 'sangria')
             ->sum('valor');
 
-        $this->saldo = $this->total_entradas - $this->total_saidas + $aportes - $sangrias;
+        return [
+            'total_entradas' => $entradas,
+            'total_saidas' => $saidas,
+            'saldo' => $entradas - $saidas + $aportes - $sangrias,
+        ];
+    }
+
+    public function recalcular()
+    {
+        $totais = $this->calcularTotais();
+
+        $this->total_entradas = $totais['total_entradas'];
+        $this->total_saidas = $totais['total_saidas'];
+        $this->saldo = $totais['saldo'];
         $this->save();
 
         // Atualiza o realizado nas metas diarias deste dia
@@ -81,5 +99,40 @@ class CaixaDiario extends Model
             $this->loja_id,
             $this->data->toDateString()
         );
+    }
+
+    /**
+     * Recalcula os caixas dos dias informados, ignorando dias que ainda nao
+     * tem caixa aberto. Recebe pares [loja_id, data] e remove repeticoes para
+     * nao sincronizar a mesma competencia varias vezes na mesma requisicao.
+     */
+    public static function recalcularDias(array $alvos): int
+    {
+        $pendentes = [];
+
+        foreach ($alvos as [$lojaId, $data]) {
+            if (!$lojaId || !$data) {
+                continue;
+            }
+
+            $dia = $data instanceof \DateTimeInterface
+                ? $data->format('Y-m-d')
+                : (string) $data;
+
+            $pendentes[$lojaId.':'.$dia] = [$lojaId, $dia];
+        }
+
+        $recalculados = 0;
+
+        foreach ($pendentes as [$lojaId, $dia]) {
+            $caixa = static::where('loja_id', $lojaId)->whereDate('data', $dia)->first();
+
+            if ($caixa) {
+                $caixa->recalcular();
+                $recalculados++;
+            }
+        }
+
+        return $recalculados;
     }
 }

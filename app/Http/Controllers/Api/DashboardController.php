@@ -25,6 +25,19 @@ class DashboardController extends Controller
         $fim = $request->input('data_fim', Carbon::now()->endOfMonth()->toDateString());
         $agrupamento = $request->input('agrupamento', 'dia'); // dia ou mes
 
+        // ── Movimentacoes internas do periodo ──
+        // Precisa vir antes do saldo: sangria e aporte entram na conta.
+        $movInternas = MovimentacaoInterna::where('loja_id', $lojaId)
+            ->whereBetween('data_movimentacao', [$inicio, $fim])
+            ->where('status', 'aprovada')
+            ->selectRaw('tipo, SUM(valor) as total, COUNT(*) as quantidade')
+            ->groupBy('tipo')
+            ->get()
+            ->keyBy('tipo');
+
+        $totalAportes = (float) ($movInternas['aporte']->total ?? 0);
+        $totalSangrias = (float) ($movInternas['sangria']->total ?? 0);
+
         // ── Cards resumo ──
         $totalEntradas = CaixaDiario::where('loja_id', $lojaId)
             ->whereBetween('data', [$inicio, $fim])
@@ -35,7 +48,9 @@ class DashboardController extends Controller
             ->whereBetween('data_pagamento', [$inicio, $fim])
             ->sum('valor_pago');
 
-        $saldo = $totalEntradas - $totalSaidas;
+        // Mesma formula de CaixaDiario::calcularTotais(), para o KPI bater com
+        // a Meta por saldo, que soma o saldo gravado nos caixas do periodo.
+        $saldo = $totalEntradas - $totalSaidas + $totalAportes - $totalSangrias;
 
         $caixasAbertos = CaixaDiario::where('loja_id', $lojaId)
             ->where('status', 'aberto')
@@ -198,15 +213,6 @@ class DashboardController extends Controller
 
         $metas = $metaService->resumoPeriodo($lojaId, $inicio, $fim);
 
-        // ── Movimentacoes internas do periodo ──
-        $movInternas = MovimentacaoInterna::where('loja_id', $lojaId)
-            ->whereBetween('data_movimentacao', [$inicio, $fim])
-            ->where('status', 'aprovada')
-            ->selectRaw('tipo, SUM(valor) as total, COUNT(*) as quantidade')
-            ->groupBy('tipo')
-            ->get()
-            ->keyBy('tipo');
-
         $movPendentes = MovimentacaoInterna::where('loja_id', $lojaId)
             ->where('status', 'solicitada')
             ->count();
@@ -241,6 +247,8 @@ class DashboardController extends Controller
             // Cards
             'total_entradas' => (float) $totalEntradas,
             'total_saidas' => (float) $totalSaidas,
+            'total_sangrias' => $totalSangrias,
+            'total_aportes' => $totalAportes,
             'saldo' => (float) $saldo,
             'caixas_abertos' => $caixasAbertos,
             'pagamentos_pendentes' => $pagamentosPendentes,

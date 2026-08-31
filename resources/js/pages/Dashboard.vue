@@ -143,7 +143,12 @@
                     <div class="kpi-value num-tabular" :class="d.saldo >= 0 ? 'text-primary' : 'text-danger'">
                         R$ {{ fmt(d.saldo) }}
                     </div>
-                    <div class="kpi-delta-label">Receitas menos despesas</div>
+                    <div class="kpi-delta-label">Entradas − saídas − sangrias + aportes</div>
+                    <div v-if="d.total_sangrias || d.total_aportes" class="kpi-delta-label">
+                        <span v-if="d.total_sangrias" class="text-danger">− R$ {{ fmt(d.total_sangrias) }} sangria</span>
+                        <span v-if="d.total_sangrias && d.total_aportes"> · </span>
+                        <span v-if="d.total_aportes" class="text-success">+ R$ {{ fmt(d.total_aportes) }} aporte</span>
+                    </div>
                 </div>
 
                 <div class="kpi">
@@ -380,11 +385,13 @@
                         <table class="table table-hover mb-0">
                             <thead><tr><th>Tipo</th><th>Qtd</th><th>Total</th></tr></thead>
                             <tbody>
-                                <tr v-for="(label, key) in movTipos" :key="key" v-if="d.movimentacoes_internas[key]">
-                                    <td><span class="badge" :class="movBadge(key)">{{ label }}</span></td>
-                                    <td class="num-tabular">{{ d.movimentacoes_internas[key].quantidade }}</td>
-                                    <td class="fw-medium num-tabular">R$ {{ fmt(d.movimentacoes_internas[key].total) }}</td>
-                                </tr>
+                                <template v-for="(label, key) in movTipos" :key="key">
+                                    <tr v-if="d.movimentacoes_internas[key]">
+                                        <td><span class="badge" :class="movBadge(key)">{{ label }}</span></td>
+                                        <td class="num-tabular">{{ d.movimentacoes_internas[key].quantidade }}</td>
+                                        <td class="fw-medium num-tabular">R$ {{ fmt(d.movimentacoes_internas[key].total) }}</td>
+                                    </tr>
+                                </template>
                                 <tr v-if="!Object.keys(d.movimentacoes_internas).length"><td colspan="3" class="empty-row">Nenhuma movimentação no período.</td></tr>
                                 <tr v-if="d.movimentacoes_pendentes > 0" class="row-pending">
                                     <td colspan="2">
