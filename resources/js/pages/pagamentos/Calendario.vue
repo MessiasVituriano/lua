@@ -127,7 +127,7 @@ const pagamentos = ref([]);
 const ano = ref(new Date().getFullYear());
 const mes = ref(new Date().getMonth()); // 0-indexed
 const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
-const categorias = { boleto: 'Boleto', imposto: 'Imposto', custo_fixo: 'Custo Fixo', funcionario: 'Funcionario', fornecedor: 'Fornecedor', outros: 'Outros' };
+const categorias = { boleto: 'Boleto', imposto: 'Imposto', custo_fixo: 'Custo Fixo', funcionario: 'Funcionario', fornecedor: 'Fornecedor', pro_labore: 'Pró-labore', outros: 'Outros' };
 const MAX_EVENTS = 3;
 
 const diaModalPagamentos = ref([]);

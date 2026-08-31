@@ -143,12 +143,7 @@
                     <div class="kpi-value num-tabular" :class="d.saldo >= 0 ? 'text-primary' : 'text-danger'">
                         R$ {{ fmt(d.saldo) }}
                     </div>
-                    <div class="kpi-delta-label">Entradas − saídas − sangrias + aportes</div>
-                    <div v-if="d.total_sangrias || d.total_aportes" class="kpi-delta-label">
-                        <span v-if="d.total_sangrias" class="text-danger">− R$ {{ fmt(d.total_sangrias) }} sangria</span>
-                        <span v-if="d.total_sangrias && d.total_aportes"> · </span>
-                        <span v-if="d.total_aportes" class="text-success">+ R$ {{ fmt(d.total_aportes) }} aporte</span>
-                    </div>
+                    <div class="kpi-delta-label">Receitas menos despesas</div>
                 </div>
 
                 <div class="kpi">
@@ -527,7 +522,8 @@ const filters = reactive({
 
 const catLabels = {
     boleto: 'Boleto', imposto: 'Imposto', custo_fixo: 'Custo Fixo',
-    funcionario: 'Funcionário', fornecedor: 'Fornecedor', outros: 'Outros',
+    funcionario: 'Funcionário', fornecedor: 'Fornecedor', pro_labore: 'Pró-labore',
+    outros: 'Outros',
 };
 
 const formaLabels = {

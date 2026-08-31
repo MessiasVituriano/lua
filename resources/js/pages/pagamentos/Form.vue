@@ -133,7 +133,7 @@ const loading = ref(false);
 const errors = reactive({});
 const isEdit = computed(() => !!route.params.id);
 const fornecedores = ref([]);
-const categorias = { boleto: 'Boleto', imposto: 'Imposto', custo_fixo: 'Custo Fixo', funcionario: 'Funcionário', fornecedor: 'Fornecedor', outros: 'Outros' };
+const categorias = { boleto: 'Boleto', imposto: 'Imposto', custo_fixo: 'Custo Fixo', funcionario: 'Funcionário', fornecedor: 'Fornecedor', pro_labore: 'Pró-labore', outros: 'Outros' };
 const hojeStr = new Date().toISOString().slice(0, 10);
 
 const form = reactive({

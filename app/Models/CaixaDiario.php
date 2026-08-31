@@ -65,23 +65,15 @@ class CaixaDiario extends Model
             ->whereIn('status', ['pago', 'parcial'])
             ->sum('valor_pago');
 
-        // Movimentacoes internas aprovadas do dia: sangrias subtraem, aportes somam
-        $aportes = (float) MovimentacaoInterna::where('loja_id', $this->loja_id)
-            ->where('data_movimentacao', $this->data)
-            ->where('status', 'aprovada')
-            ->where('tipo', 'aporte')
-            ->sum('valor');
-
-        $sangrias = (float) MovimentacaoInterna::where('loja_id', $this->loja_id)
-            ->where('data_movimentacao', $this->data)
-            ->where('status', 'aprovada')
-            ->where('tipo', 'sangria')
-            ->sum('valor');
-
+        // Movimentacoes internas (sangria, aporte, transferencias) NAO entram
+        // aqui de proposito: elas movem dinheiro entre contas e patrimonio, nao
+        // sao resultado do dia. Retirada do dono se lanca como pagamento de
+        // categoria pro_labore, e o saldo disponivel por conta fica na tela de
+        // Movimentacoes, que soma as movimentacoes por banco.
         return [
             'total_entradas' => $entradas,
             'total_saidas' => $saidas,
-            'saldo' => $entradas - $saidas + $aportes - $sangrias,
+            'saldo' => $entradas - $saidas,
         ];
     }
 

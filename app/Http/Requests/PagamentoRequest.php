@@ -16,7 +16,7 @@ class PagamentoRequest extends FormRequest
     {
         return [
             'fornecedor_id' => ['nullable', 'exists:fornecedores,id'],
-            'categoria' => ['required', Rule::in(['boleto', 'imposto', 'custo_fixo', 'funcionario', 'fornecedor', 'outros'])],
+            'categoria' => ['required', Rule::in(['boleto', 'imposto', 'custo_fixo', 'funcionario', 'fornecedor', 'pro_labore', 'outros'])],
             'descricao' => ['required', 'string', 'max:255'],
             'valor_total' => ['required', 'numeric', 'min:0.01'],
             'data_vencimento' => ['required', 'date'],

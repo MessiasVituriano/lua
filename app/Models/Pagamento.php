@@ -41,6 +41,7 @@ class Pagamento extends Model
         'custo_fixo' => 'Custo Fixo',
         'funcionario' => 'Funcionário',
         'fornecedor' => 'Fornecedor',
+        'pro_labore' => 'Pró-labore',
         'outros' => 'Outros',
     ];
 
