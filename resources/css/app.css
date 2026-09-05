@@ -401,8 +401,82 @@ small { color: var(--lua-text-muted); }
    Responsive
    ============================================================ */
 
+/* Nada pode estourar a largura da tela: o scroll horizontal fica
+   contido em quem realmente precisa dele (.table-responsive). */
+html, body {
+    max-width: 100%;
+    overflow-x: clip;
+}
+
+/* Menu lateral aberto no celular: congela o conteudo atras dele. */
+body.sidebar-locked {
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
+@media (max-width: 991.98px) {
+    /* iOS Safari da zoom automatico ao focar campo com fonte < 16px,
+       e a pagina fica presa ampliada com scroll lateral. */
+    .form-control,
+    .form-select,
+    .form-control-sm,
+    .form-select-sm,
+    input, select, textarea {
+        font-size: 16px;
+    }
+
+    /* Alvo de toque confortavel */
+    .btn { padding: 0.55rem 0.9rem; }
+    .btn-sm { padding: 0.45rem 0.75rem; }
+    .btn-close { padding: 0.6rem; }
+}
+
 @media (max-width: 767.98px) {
-    .table { font-size: 0.82rem; }
-    .table th, .table td { padding: 0.45rem 0.6rem; white-space: nowrap; }
     h5 { font-size: 1rem; }
+
+    .table { font-size: 0.82rem; }
+    .table th, .table td { padding: 0.5rem 0.6rem; }
+
+    /* Antes tudo era nowrap e qualquer tabela ia pro scroll lateral.
+       Agora a primeira coluna (nome/descricao, a mais larga) quebra em
+       varias linhas e o resto — valores, datas, acoes — segue inteiro. */
+    .table th,
+    .table td { white-space: nowrap; }
+    .table td:first-child,
+    .table th:first-child,
+    .table td.wrap,
+    .table th.wrap {
+        white-space: normal;
+        min-width: 7rem;
+    }
+
+    .table-responsive {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+    }
+
+    .card-body { padding: 0.875rem; }
+    .card-header { padding: 0.75rem 0.875rem; }
+
+    /* Modal ocupa a tela toda no celular */
+    .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+    .modal-dialog-centered { min-height: calc(100% - 1rem); }
+    .modal-body { padding: 0.875rem; }
+    .modal-footer { padding: 0.65rem 0.875rem; }
+    .modal-footer .btn { flex: 1 1 auto; justify-content: center; }
+
+    .dropdown-menu { min-width: 180px; max-width: calc(100vw - 2rem); }
+
+    /* Abas rolam na horizontal em vez de quebrar a linha */
+    .nav-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+    }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+    .nav-tabs .nav-link { white-space: nowrap; }
 }

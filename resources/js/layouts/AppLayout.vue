@@ -121,6 +121,18 @@
         </div>
 
         <div class="sidebar-footer">
+            <!-- No celular a topbar esconde o seletor de loja; aqui ele continua acessivel. -->
+            <select
+                v-if="auth.lojas.length > 1"
+                class="loja-select sidebar-loja d-md-none"
+                :value="auth.user?.loja_id"
+                @change="switchLoja($event.target.value)"
+            >
+                <option v-for="loja in auth.lojas" :key="loja.id" :value="loja.id">
+                    {{ loja.nome }}
+                </option>
+            </select>
+
             <div class="user-card">
                 <div class="user-avatar">{{ userInitials }}</div>
                 <div class="user-info">
@@ -140,7 +152,7 @@
                 <button class="icon-btn d-lg-none" @click="sidebarOpen = !sidebarOpen" aria-label="Menu">
                     <Menu :size="18" />
                 </button>
-                <h5 class="topbar-title d-none d-sm-block">{{ pageTitle }}</h5>
+                <h5 class="topbar-title">{{ pageTitle }}</h5>
             </div>
             <div class="topbar-right">
                 <select
@@ -199,7 +211,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useNotificationStore } from '../stores/notification';
@@ -254,6 +266,11 @@ const pageTitle = computed(() => titles[route.name] || 'LUA');
 
 function closeMobile() { sidebarOpen.value = false; }
 
+// Sem isso o conteudo continua rolando atras do menu aberto no celular.
+watch(sidebarOpen, (open) => {
+    document.body.classList.toggle('sidebar-locked', open);
+});
+
 function fmtDateShort(d) {
     if (!d) return '';
     const s = typeof d === 'string' ? d.slice(0, 10) : d;
@@ -293,6 +310,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
     if (pendentesTimer) clearInterval(pendentesTimer);
+    document.body.classList.remove('sidebar-locked');
 });
 
 async function switchLoja(lojaId) {
@@ -311,6 +329,7 @@ async function handleLogout() {
 .sidebar {
     width: 248px;
     height: 100vh;
+    height: 100dvh;
     background: var(--lua-sidebar);
     border-right: 1px solid var(--lua-sidebar-border);
     position: fixed;
@@ -369,6 +388,7 @@ async function handleLogout() {
 .sidebar-nav {
     flex: 1;
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 0.75rem 0.5rem;
 }
 
@@ -420,6 +440,11 @@ async function handleLogout() {
 .sidebar-footer {
     border-top: 1px solid var(--lua-sidebar-border);
     padding: 0.625rem;
+}
+.sidebar-loja {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    min-width: 0;
 }
 .user-card {
     display: flex;
@@ -478,7 +503,12 @@ async function handleLogout() {
 }
 
 /* ============ Topbar ============ */
-.main-content { margin-left: 248px; min-height: 100vh; }
+.main-content {
+    margin-left: 248px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    min-width: 0;
+}
 
 .topbar {
     background: var(--lua-topbar);
@@ -498,6 +528,8 @@ async function handleLogout() {
     align-items: center;
     gap: 0.625rem;
 }
+.topbar-left { min-width: 0; flex: 1; }
+.topbar-right { flex-shrink: 0; }
 .topbar-title {
     font-family: 'Inter Tight', 'Inter', sans-serif;
     font-size: 0.95rem;
@@ -505,6 +537,9 @@ async function handleLogout() {
     letter-spacing: -0.01em;
     color: var(--lua-text);
     margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .icon-btn {
     background: none;
@@ -557,7 +592,11 @@ async function handleLogout() {
 }
 
 /* ============ Content ============ */
-.content-area { padding: 1.25rem 1.5rem; max-width: 1400px; }
+.content-area {
+    padding: 1.25rem 1.5rem;
+    max-width: 1400px;
+    min-width: 0;
+}
 
 .pendencia-banner {
     display: flex;
@@ -579,13 +618,33 @@ async function handleLogout() {
 /* ============ Mobile ============ */
 @media (max-width: 991.98px) {
     .sidebar {
+        width: min(280px, 84vw);
         transform: translateX(-100%);
         transition: transform 0.25s ease;
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
     }
     .sidebar.open {
         transform: translateX(0);
     }
     .main-content { margin-left: 0; }
-    .content-area { padding: 1rem; }
+
+    .topbar {
+        padding: 0.5rem 0.875rem;
+        padding-left: max(0.875rem, env(safe-area-inset-left));
+        padding-right: max(0.875rem, env(safe-area-inset-right));
+    }
+
+    .content-area {
+        padding: 0.875rem;
+        padding-left: max(0.875rem, env(safe-area-inset-left));
+        padding-right: max(0.875rem, env(safe-area-inset-right));
+        padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+    }
+
+    .pendencia-banner {
+        flex-wrap: wrap;
+        padding: 0.75rem;
+    }
 }
 </style>
